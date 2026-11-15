@@ -154,6 +154,34 @@ function vistaCatalogo(documento) {
         })
       ]),
       crear(documento, 'p', {
+        id: 'catalogo-cargando',
+        clase: 'mensaje mensaje--aviso',
+        role: 'status',
+        texto: 'Cargando…',
+        hidden: true
+      }),
+      crear(documento, 'p', {
+        id: 'catalogo-error',
+        clase: 'mensaje mensaje--error',
+        role: 'alert',
+        texto: 'No se pudo conectar con el servidor.',
+        hidden: true
+      }),
+      crear(documento, 'button', {
+        id: 'catalogo-reintentar',
+        clase: 'boton boton--secundario',
+        type: 'button',
+        texto: 'Reintentar',
+        hidden: true
+      }),
+      crear(documento, 'p', {
+        id: 'catalogo-fin',
+        clase: 'mensaje mensaje--aviso',
+        role: 'status',
+        texto: 'No hay más resultados.',
+        hidden: true
+      }),
+      crear(documento, 'p', {
         id: 'catalogo-vacio',
         clase: 'mensaje mensaje--vacio',
         role: 'status',
@@ -171,7 +199,83 @@ function vistaCatalogo(documento) {
         id: 'catalogo-lista',
         clase: 'rejilla-libros',
         'aria-label': 'Libros del catálogo'
-      })
+      }),
+      crear(
+        documento,
+        'nav',
+        {
+          id: 'catalogo-paginacion',
+          clase: 'paginacion',
+          'aria-label': 'Paginación del catálogo',
+          hidden: true
+        },
+        [
+          crear(documento, 'button', {
+            id: 'catalogo-anterior',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Anterior'
+          }),
+          crear(documento, 'p', {
+            id: 'catalogo-pagina',
+            clase: 'paginacion__pagina',
+            role: 'status',
+            texto: 'Página 1'
+          }),
+          crear(documento, 'button', {
+            id: 'catalogo-siguiente',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Siguiente'
+          })
+        ]
+      ),
+      crear(
+        documento,
+        'section',
+        {
+          id: 'catalogo-detalle',
+          clase: 'detalle',
+          'aria-labelledby': 'catalogo-detalle-titulo',
+          hidden: true
+        },
+        [
+          crear(documento, 'div', { clase: 'detalle__encabezado' }, [
+            crear(documento, 'p', { clase: 'vista__sobretitulo', texto: 'Detalle' }),
+            crear(documento, 'h3', {
+              id: 'catalogo-detalle-titulo',
+              tabindex: '-1',
+              texto: 'Libro'
+            })
+          ]),
+          crear(documento, 'dl', { id: 'catalogo-detalle-datos', clase: 'libro__datos' }),
+          crear(documento, 'h4', {
+            clase: 'formulario__subtitulo',
+            texto: 'Autorías'
+          }),
+          crear(documento, 'ul', { id: 'catalogo-detalle-autores', clase: 'autorias' }),
+          crear(documento, 'p', {
+            id: 'catalogo-detalle-error',
+            clase: 'mensaje mensaje--error',
+            role: 'alert',
+            texto: 'No se pudo cargar el detalle.',
+            hidden: true
+          }),
+          crear(documento, 'button', {
+            id: 'catalogo-detalle-reintentar',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Reintentar detalle',
+            hidden: true
+          }),
+          crear(documento, 'button', {
+            id: 'catalogo-detalle-cerrar',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Cerrar detalle'
+          })
+        ]
+      )
     ]
   );
 }

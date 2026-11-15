@@ -1,9 +1,10 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { crearPagina } from './pagina.mjs';
 import { cargarModulos } from './cargar-modulos.mjs';
 import { fetchFalso, respuestaJson } from './ayudas.mjs';
+import { Documento } from './dom-simulado.mjs';
 
 async function cargarUtils() {
   const { documento } = crearPagina();
@@ -60,4 +61,38 @@ test('los microsegundos del ISO no alteran el instante mostrado', async () => {
     utils.formatearFechaHora('2026-10-08T21:14:11.751581Z'),
     utils.formatearFechaHora('2026-10-08T21:14:11Z')
   );
+});
+
+test('actualizarPaginacion deshabilita Anterior en 0 y Siguiente sin página completa', async () => {
+  const documento = new Documento();
+  const anterior = documento.createElement('button');
+  const siguiente = documento.createElement('button');
+  const pagina = documento.createElement('p');
+  const utils = await cargarUtils();
+
+  utils.actualizarPaginacion({
+    anterior: anterior,
+    siguiente: siguiente,
+    pagina: pagina,
+    desplazamiento: 0,
+    tamano: 20,
+    haySiguiente: false
+  });
+
+  assert.equal(anterior.disabled, true);
+  assert.equal(siguiente.disabled, true);
+  assert.equal(pagina.textContent, 'Página 1');
+
+  utils.actualizarPaginacion({
+    anterior: anterior,
+    siguiente: siguiente,
+    pagina: pagina,
+    desplazamiento: 20,
+    tamano: 20,
+    haySiguiente: true
+  });
+
+  assert.equal(anterior.disabled, false);
+  assert.equal(siguiente.disabled, false);
+  assert.equal(pagina.textContent, 'Página 2');
 });

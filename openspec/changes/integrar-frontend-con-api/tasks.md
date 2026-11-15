@@ -66,35 +66,35 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
 
 ## 3. Catálogo
 
-- [ ] 3.1 Agregar a `frontend/public/index.html` los controles del catálogo y replicarlos en `frontend/test/pagina.mjs`: `#catalogo-cargando`, `#catalogo-error`, `#catalogo-reintentar`, `#catalogo-fin`, `#catalogo-paginacion`, `#catalogo-anterior`, `#catalogo-siguiente`, `#catalogo-pagina`, `#catalogo-detalle`, `#catalogo-detalle-titulo`, `#catalogo-detalle-datos`, `#catalogo-detalle-autores`, `#catalogo-detalle-error`, `#catalogo-detalle-reintentar` y `#catalogo-detalle-cerrar`.
+- [x] 3.1 Agregar a `frontend/public/index.html` los controles del catálogo y replicarlos en `frontend/test/pagina.mjs`: `#catalogo-cargando`, `#catalogo-error`, `#catalogo-reintentar`, `#catalogo-fin`, `#catalogo-paginacion`, `#catalogo-anterior`, `#catalogo-siguiente`, `#catalogo-pagina`, `#catalogo-detalle`, `#catalogo-detalle-titulo`, `#catalogo-detalle-datos`, `#catalogo-detalle-autores`, `#catalogo-detalle-error`, `#catalogo-detalle-reintentar` y `#catalogo-detalle-cerrar`.
   - RED: agregar los ids al HTML sin tocar el fixture; `node --test frontend/test` falla en el test de igualdad de ids.
   - GREEN: completar el fixture; pasa.
   - TRIANGULACIÓN: comprobar que cada botón nuevo está dentro de su `nav` o `section` con `closest`; pasa.
-- [ ] 3.2 Reemplazar el filtro local por la carga desde la API: `Libreria.catalogo.iniciar()` pide `GET /api/libros/?limit=20&offset=0` y dibuja título, ISBN, precio, editorial y género.
+- [x] 3.2 Reemplazar el filtro local por la carga desde la API: `Libreria.catalogo.iniciar()` pide `GET /api/libros/?limit=20&offset=0` y dibuja título, ISBN, precio, editorial y género.
   - RED: `frontend/test/catalogo.test.mjs` con un `fetch` falso y la página montada; falla porque el módulo lee `Libreria.datos`.
   - GREEN: implementar la carga y el render con `createElement` y `textContent`; pasa.
   - TRIANGULACIÓN: un libro con `genero: null` muestra «Sin clasificar» y el precio `"25000.00"` se muestra `$ 25.000,00`.
-- [ ] 3.3 Implementar la búsqueda por título con el formulario: enviar `titulo`, reiniciar `offset` a 0 y reemplazar el listado; con el campo vacío no enviar `titulo`.
+- [x] 3.3 Implementar la búsqueda por título con el formulario: enviar `titulo`, reiniciar `offset` a 0 y reemplazar el listado; con el campo vacío no enviar `titulo`.
   - RED: casos en `catalogo.test.mjs` que verifican la URL y las tarjetas tras el `submit`; fallan.
   - GREEN: implementar el manejador del formulario; pasan.
   - TRIANGULACIÓN: desde `offset=20`, una búsqueda nueva usa `offset=0`; y borrar el filtro vuelve al listado completo.
-- [ ] 3.4 Implementar la paginación del catálogo con «Anterior» y «Siguiente», deshabilitando «Anterior» en `offset=0` y «Siguiente» cuando la página trae menos de 20 elementos.
+- [x] 3.4 Implementar la paginación del catálogo con «Anterior» y «Siguiente», deshabilitando «Anterior» en `offset=0` y «Siguiente» cuando la página trae menos de 20 elementos.
   - RED: casos en `catalogo.test.mjs` con 20 y con 7 elementos; fallan.
   - GREEN: implementar los botones y el cálculo del desplazamiento; pasan.
   - TRIANGULACIÓN: avanzar y volver conserva el título del filtro activo.
-- [ ] 3.5 Implementar el detalle: un botón por tarjeta consulta `GET /api/libros/{id}` y muestra título, datos y autorías con nombre, rol y orden; el detalle se cierra sin tocar la página actual.
+- [x] 3.5 Implementar el detalle: un botón por tarjeta consulta `GET /api/libros/{id}` y muestra título, datos y autorías con nombre, rol y orden; el detalle se cierra sin tocar la página actual.
   - RED: casos en `catalogo.test.mjs`; fallan porque no hay detalle.
   - GREEN: implementar apertura, render y cierre; pasan.
   - TRIANGULACIÓN: un libro con dos autorías muestra las dos y el cierre limpia el contenido.
-- [ ] 3.6 Implementar los cuatro estados: carga con «Cargando…» y `aria-busy`, lista vacía solo en `offset=0` sin filtro, búsqueda sin coincidencias con filtro y página posterior vacía con aviso de fin.
+- [x] 3.6 Implementar los cuatro estados: carga con «Cargando…» y `aria-busy`, lista vacía solo en `offset=0` sin filtro, búsqueda sin coincidencias con filtro y página posterior vacía con aviso de fin.
   - RED: casos en `catalogo.test.mjs` que inspeccionan `hidden` y `aria-busy` durante la promesa pendiente y al resolver; fallan.
   - GREEN: implementar el estado y los mensajes; pasan.
   - TRIANGULACIÓN: una página 2 vacía sin filtro no muestra el mensaje de biblioteca vacía y sí el de fin.
-- [ ] 3.7 Implementar el error de conexión con reintento en catálogo y en detalle: mensaje propio, botón que repite la misma consulta y ocultamiento del estado vacío.
+- [x] 3.7 Implementar el error de conexión con reintento en catálogo y en detalle: mensaje propio, botón que repite la misma consulta y ocultamiento del estado vacío.
   - RED: casos con `fetch` que rechaza en la carga, en la búsqueda y en el detalle; fallan.
   - GREEN: implementar el manejo y el reintento; pasan.
   - TRIANGULACIÓN: el reintento de una búsqueda fallida repite título y `offset` originales.
-- [ ] 3.8 Extraer a `utils` la actualización de los controles de paginación (texto de página y `disabled` de ambos botones) y usarla en el catálogo.
+- [x] 3.8 Extraer a `utils` la actualización de los controles de paginación (texto de página y `disabled` de ambos botones) y usarla en el catálogo.
   - RED: casos en `utils.test.mjs` para la función compartida; fallan.
   - GREEN: implementar y reemplazar el código del catálogo; `node --test frontend/test` pasa.
   - TRIANGULACIÓN: con página incompleta deshabilita «Siguiente» y con `offset=0` deshabilita «Anterior».

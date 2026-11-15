@@ -28,3 +28,20 @@ test('la comparación de ids informa el id que falta', () => {
 
   assert.ok(faltantes.includes('catalogo'));
 });
+
+test('los controles del catálogo quedan dentro de su navegación y su sección', () => {
+  const { documento } = crearPagina();
+
+  assert.equal(
+    documento.getElementById('catalogo-anterior').closest('nav'),
+    documento.getElementById('catalogo-paginacion')
+  );
+  assert.equal(
+    documento.getElementById('catalogo-detalle-cerrar').closest('section'),
+    documento.getElementById('catalogo-detalle')
+  );
+  assert.equal(
+    documento.getElementById('catalogo-reintentar').closest('section'),
+    documento.getElementById('catalogo')
+  );
+});

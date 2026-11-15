@@ -48,10 +48,33 @@
           <button class="boton boton--primario" id="boton-buscar" type="submit">Buscar</button>
         </form>
 
+        <p class="mensaje mensaje--aviso" id="catalogo-cargando" role="status" hidden>Cargando…</p>
+        <p class="mensaje mensaje--error" id="catalogo-error" role="alert" hidden>No se pudo conectar con el servidor.</p>
+        <button class="boton boton--secundario" id="catalogo-reintentar" type="button" hidden>Reintentar</button>
+        <p class="mensaje mensaje--aviso" id="catalogo-fin" role="status" hidden>No hay más resultados.</p>
         <p class="mensaje mensaje--vacio" id="catalogo-vacio" role="status" hidden>No hay libros para mostrar.</p>
         <p class="mensaje mensaje--aviso" id="catalogo-sin-resultados" role="status" hidden>No se encontraron libros con ese título.</p>
 
         <ul class="rejilla-libros" id="catalogo-lista" aria-label="Libros del catálogo"></ul>
+
+        <nav class="paginacion" id="catalogo-paginacion" aria-label="Paginación del catálogo" hidden>
+          <button class="boton boton--secundario" id="catalogo-anterior" type="button">Anterior</button>
+          <p class="paginacion__pagina" id="catalogo-pagina" role="status">Página 1</p>
+          <button class="boton boton--secundario" id="catalogo-siguiente" type="button">Siguiente</button>
+        </nav>
+
+        <section class="detalle" id="catalogo-detalle" aria-labelledby="catalogo-detalle-titulo" hidden>
+          <div class="detalle__encabezado">
+            <p class="vista__sobretitulo">Detalle</p>
+            <h3 id="catalogo-detalle-titulo" tabindex="-1">Libro</h3>
+          </div>
+          <dl class="libro__datos" id="catalogo-detalle-datos"></dl>
+          <h4 class="formulario__subtitulo">Autorías</h4>
+          <ul class="autorias" id="catalogo-detalle-autores"></ul>
+          <p class="mensaje mensaje--error" id="catalogo-detalle-error" role="alert" hidden>No se pudo cargar el detalle.</p>
+          <button class="boton boton--secundario" id="catalogo-detalle-reintentar" type="button" hidden>Reintentar detalle</button>
+          <button class="boton boton--secundario" id="catalogo-detalle-cerrar" type="button">Cerrar detalle</button>
+        </section>
       </section>
 
       <section class="vista" id="libros" aria-labelledby="libros-titulo">

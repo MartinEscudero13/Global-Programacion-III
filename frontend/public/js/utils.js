@@ -165,6 +165,28 @@
     select.value = existe ? valorPrevio : '';
   }
 
+  // Actualiza los controles de paginación de cualquier colección: «Anterior» se
+  // deshabilita en el desplazamiento 0 y «Siguiente» cuando la página recibida
+  // no está completa (la API no devuelve el total).
+  function actualizarPaginacion(opciones) {
+    const configuracion = opciones || {};
+    const tamano = configuracion.tamano || 20;
+    const desplazamiento = configuracion.desplazamiento || 0;
+
+    if (configuracion.anterior) {
+      configuracion.anterior.disabled = desplazamiento === 0;
+    }
+
+    if (configuracion.siguiente) {
+      configuracion.siguiente.disabled = configuracion.haySiguiente !== true;
+    }
+
+    if (configuracion.pagina) {
+      configuracion.pagina.textContent =
+        'Página ' + (Math.floor(desplazamiento / tamano) + 1);
+    }
+  }
+
   Libreria.utils = {
     TEXTO_SIN_GENERO: TEXTO_SIN_GENERO,
     normalizarBusqueda: normalizarBusqueda,
@@ -175,6 +197,7 @@
     formatearPrecio: formatearPrecio,
     parsearImporte: parsearImporte,
     formatearFechaHora: formatearFechaHora,
+    actualizarPaginacion: actualizarPaginacion,
     fechaLocalISO: fechaLocalISO,
     formatearFecha: formatearFecha,
     indexarPorId: indexarPorId,
