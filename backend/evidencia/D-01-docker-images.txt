@@ -1,0 +1,45 @@
+================================================================
+D-01 — Tamaño de la imagen base (< 100 MB)
+================================================================
+ESTADO: VERIFICADO EN EL VPS (2026-11-12) y en local
+CASO: la imagen base pesa menos de 100 MB y el Dockerfile parte de ella.
+
+================================================================
+SALIDA REAL — VPS 46.202.151.202 (Ubuntu 24.04.4, Docker 29.7.1)
+================================================================
+COMANDOS:
+  docker pull python:3.12-alpine
+  docker images python:3.12-alpine
+  docker images libreria-zoriontech
+
+SALIDA:
+  python:3.12-alpine | disco=74.8MB | id=c5ba3deef00c
+  libreria-zoriontech:latest | disco=264MB | id=7a12038e2ead
+
+CONCLUSIÓN (VPS):
+  La base Alpine pesa 74.8 MB < 100 MB (cumple) y el Dockerfile parte de
+  `FROM python:3.12-alpine`. La imagen del proyecto ocupa 264 MB en disco por
+  las dependencias de requirements.txt (fastapi[standard], sqlalchemy, asyncpg,
+  python-dotenv).
+
+================================================================
+SALIDA REAL — local (no VPS), Docker 29.7.2
+================================================================
+COMANDOS:
+  docker pull python:3.12-alpine
+  docker images python:3.12-alpine
+  docker images libreria-local
+
+SALIDA:
+  python:3.12-alpine | 74.8MB
+  libreria-local:latest | 264MB (61.3 MB de contenido)
+
+NOTA:
+  Con el almacén containerd de Docker 29 el FROM por digest no deja la base
+  etiquetada en `docker images`; el pull explícito la publica.
+
+CONCLUSIÓN:
+  La base mide 74.8 MB en ambos entornos (< 100 MB). El contenedor del
+  despliegue se llama `libreria-zoriontech`; en local se usa `libreria-local`
+  para no confundirlo con el contenedor `libreria` de otro grupo que existe en
+  el VPS compartido.

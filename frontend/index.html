@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Librería — Programación III</title>
+  <meta name="description" content="Trabajo práctico integrador de frontend para una librería, desarrollado con HTML, CSS y JavaScript nativos.">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <a class="salto-contenido" href="#contenido">Saltar al contenido</a>
+
+  <header class="cabecera">
+    <div class="contenedor cabecera__interior">
+      <div class="cabecera__marca">
+        <h1 class="cabecera__titulo">Librería</h1>
+        <p class="cabecera__detalle">Programación III</p>
+      </div>
+      <nav class="nav-principal" aria-label="Navegación principal">
+        <ul class="nav-principal__lista">
+          <li><a class="nav-principal__enlace" href="#catalogo">Catálogo</a></li>
+          <li><a class="nav-principal__enlace" href="#libros">Libros</a></li>
+          <li><a class="nav-principal__enlace" href="#clientes">Clientes</a></li>
+          <li><a class="nav-principal__enlace" href="#ventas">Ventas</a></li>
+          <li><a class="nav-principal__enlace" href="#historial">Historial</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenido" id="contenido" tabindex="-1">
+    <div class="contenedor">
+      <section class="vista" id="catalogo" aria-labelledby="catalogo-titulo">
+        <div class="vista__encabezado">
+          <p class="vista__sobretitulo">Librería</p>
+          <h2 id="catalogo-titulo">Catálogo</h2>
+          <p class="vista__descripcion">Libros disponibles. Buscá por título para acotar el listado.</p>
+        </div>
+
+        <form class="buscador" id="form-busqueda" role="search">
+          <div class="campo">
+            <label class="campo__etiqueta" for="busqueda-titulo">Buscar por título</label>
+            <input class="campo__control" id="busqueda-titulo" name="busqueda" type="search" placeholder="Ej.: jardín" autocomplete="off">
+          </div>
+          <button class="boton boton--primario" id="boton-buscar" type="submit">Buscar</button>
+        </form>
+
+        <p class="mensaje mensaje--vacio" id="catalogo-vacio" role="status" hidden>No hay libros para mostrar.</p>
+        <p class="mensaje mensaje--aviso" id="catalogo-sin-resultados" role="status" hidden>No se encontraron libros con ese título.</p>
+
+        <ul class="rejilla-libros" id="catalogo-lista" aria-label="Libros del catálogo"></ul>
+      </section>
+
+      <section class="vista" id="libros" aria-labelledby="libros-titulo">
+        <div class="vista__encabezado">
+          <p class="vista__sobretitulo">Altas</p>
+          <h2 id="libros-titulo">Libros</h2>
+          <p class="vista__descripcion">Registrá un libro y consultá el listado completo.</p>
+        </div>
+
+        <div class="disposicion-alta">
+          <form class="formulario" id="form-libro" novalidate>
+            <h3 class="formulario__titulo">Alta de libro</h3>
+            <div class="formulario__rejilla">
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-titulo">Título <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="libro-titulo" name="titulo" type="text" autocomplete="off" aria-describedby="libro-titulo-error" required>
+                <p class="campo__error" id="libro-titulo-error" hidden></p>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-isbn">ISBN <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="libro-isbn" name="isbn" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-describedby="libro-isbn-ayuda libro-isbn-error" required>
+                <p class="campo__ayuda" id="libro-isbn-ayuda">Se compara sin espacios ni guiones.</p>
+                <p class="campo__error" id="libro-isbn-error" hidden></p>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-precio">Precio <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="libro-precio" name="precio" type="number" min="0.01" step="0.01" inputmode="decimal" aria-describedby="libro-precio-error" required>
+                <p class="campo__error" id="libro-precio-error" hidden></p>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-editorial">Editorial <span class="campo__obligatorio">(obligatoria)</span></label>
+                <select class="campo__control" id="libro-editorial" name="editorial" aria-describedby="libro-editorial-error" required>
+                  <option value="">Seleccioná una editorial</option>
+                </select>
+                <p class="campo__error" id="libro-editorial-error" hidden></p>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-genero">Género</label>
+                <select class="campo__control" id="libro-genero" name="genero" aria-describedby="libro-genero-error">
+                  <option value="">Sin clasificar</option>
+                </select>
+                <p class="campo__ayuda">Opcional.</p>
+                <p class="campo__error" id="libro-genero-error" hidden></p>
+              </div>
+              <fieldset class="campo campo--grupo campo--ancho" aria-describedby="libro-autores-error">
+                <legend class="campo__etiqueta">Autores <span class="campo__obligatorio">(al menos uno)</span></legend>
+                <div class="opciones" id="libro-autores"></div>
+                <p class="campo__error" id="libro-autores-error" hidden></p>
+              </fieldset>
+            </div>
+            <p class="mensaje mensaje--error" id="libro-mensaje" role="alert" hidden>Revisá los campos marcados.</p>
+            <p class="mensaje mensaje--exito" id="libro-exito" role="status" hidden>Listo: el libro se registró correctamente.</p>
+            <div class="formulario__acciones">
+              <button class="boton boton--primario" id="libro-registrar" type="submit">Registrar libro</button>
+              <button class="boton boton--secundario" id="libro-limpiar" type="reset">Limpiar formulario</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <h3 class="panel__titulo">Libros registrados</h3>
+            <section class="tabla-contenedor" aria-labelledby="libros-tabla-titulo" tabindex="0">
+              <table class="tabla" id="tabla-libros">
+                <caption class="tabla__titulo visualmente-oculto" id="libros-tabla-titulo">Listado de libros</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Título</th>
+                    <th scope="col">ISBN</th>
+                    <th scope="col">Editorial</th>
+                    <th scope="col">Género</th>
+                    <th scope="col">Autores</th>
+                    <th scope="col" class="tabla__numero">Precio</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </section>
+            <p class="mensaje mensaje--vacio" id="libros-vacio" role="status" hidden>No hay libros registrados.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="vista" id="clientes" aria-labelledby="clientes-titulo">
+        <div class="vista__encabezado">
+          <p class="vista__sobretitulo">Altas</p>
+          <h2 id="clientes-titulo">Clientes</h2>
+          <p class="vista__descripcion">Registrá un cliente y consultá el listado completo.</p>
+        </div>
+
+        <div class="disposicion-alta">
+          <form class="formulario" id="form-cliente" novalidate>
+            <h3 class="formulario__titulo">Alta de cliente</h3>
+            <div class="formulario__rejilla">
+              <div class="campo campo--ancho">
+                <label class="campo__etiqueta" for="cliente-nombre">Nombre completo <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="cliente-nombre" name="nombre" type="text" autocomplete="name" aria-describedby="cliente-nombre-error" required>
+                <p class="campo__error" id="cliente-nombre-error" hidden></p>
+              </div>
+              <div class="campo campo--ancho">
+                <label class="campo__etiqueta" for="cliente-email">Email <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="cliente-email" name="email" type="email" autocomplete="email" aria-describedby="cliente-email-ayuda cliente-email-error" required>
+                <p class="campo__ayuda" id="cliente-email-ayuda">Se compara sin espacios exteriores y sin distinguir mayúsculas.</p>
+                <p class="campo__error" id="cliente-email-error" hidden></p>
+              </div>
+            </div>
+            <p class="mensaje mensaje--error" id="cliente-mensaje" role="alert" hidden>Revisá los campos marcados.</p>
+            <p class="mensaje mensaje--exito" id="cliente-exito" role="status" hidden>Listo: el cliente se registró correctamente.</p>
+            <div class="formulario__acciones">
+              <button class="boton boton--primario" id="cliente-registrar" type="submit">Registrar cliente</button>
+              <button class="boton boton--secundario" id="cliente-limpiar" type="reset">Limpiar formulario</button>
+            </div>
+          </form>
+
+          <div class="panel">
+            <h3 class="panel__titulo">Clientes registrados</h3>
+            <section class="tabla-contenedor" aria-labelledby="clientes-tabla-titulo" tabindex="0">
+              <table class="tabla tabla--angosta" id="tabla-clientes">
+                <caption class="tabla__titulo visualmente-oculto" id="clientes-tabla-titulo">Listado de clientes</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Nombre completo</th>
+                    <th scope="col">Email</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </section>
+            <p class="mensaje mensaje--vacio" id="clientes-vacio" role="status" hidden>No hay clientes registrados.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="vista" id="ventas" aria-labelledby="ventas-titulo">
+        <div class="vista__encabezado">
+          <p class="vista__sobretitulo">Operaciones</p>
+          <h2 id="ventas-titulo">Ventas</h2>
+          <p class="vista__descripcion">Seleccioná un cliente, agregá renglones y revisá el resumen antes de confirmar.</p>
+        </div>
+
+        <div class="disposicion-venta">
+          <form class="formulario" id="form-venta" novalidate>
+            <h3 class="formulario__titulo">Nueva venta</h3>
+            <div class="campo">
+              <label class="campo__etiqueta" for="venta-cliente">Cliente <span class="campo__obligatorio">(obligatorio)</span></label>
+              <select class="campo__control" id="venta-cliente" name="cliente" required>
+                <option value="">Seleccioná un cliente</option>
+              </select>
+            </div>
+
+            <div class="formulario__renglon">
+              <div class="campo">
+                <label class="campo__etiqueta" for="venta-libro">Libro <span class="campo__obligatorio">(obligatorio)</span></label>
+                <select class="campo__control" id="venta-libro" name="libro" required>
+                  <option value="">Seleccioná un libro</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="venta-cantidad">Cantidad <span class="campo__obligatorio">(obligatoria)</span></label>
+                <input class="campo__control" id="venta-cantidad" name="cantidad" type="number" min="1" step="1" value="1" inputmode="numeric" required>
+              </div>
+              <button class="boton boton--secundario" id="venta-agregar" type="submit">Agregar renglón</button>
+            </div>
+
+            <p class="mensaje mensaje--error" id="venta-mensaje" role="alert" hidden>Error: revisá el cliente, el libro y la cantidad.</p>
+
+            <h4 class="formulario__subtitulo">Renglones de la venta</h4>
+            <section class="tabla-contenedor" aria-labelledby="renglones-tabla-titulo" tabindex="0">
+              <table class="tabla" id="tabla-renglones">
+                <caption class="tabla__titulo visualmente-oculto" id="renglones-tabla-titulo">Renglones cargados</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Libro</th>
+                    <th scope="col" class="tabla__numero">Cantidad</th>
+                    <th scope="col" class="tabla__numero">Precio unitario</th>
+                    <th scope="col" class="tabla__numero">Subtotal</th>
+                    <th scope="col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </section>
+            <p class="mensaje mensaje--vacio" id="venta-vacio" role="status" hidden>Todavía no se agregaron renglones a la venta.</p>
+          </form>
+
+          <aside class="resumen" aria-labelledby="resumen-titulo">
+            <h3 class="resumen__titulo" id="resumen-titulo">Resumen de la venta</h3>
+            <dl class="resumen__lista">
+              <div class="resumen__fila">
+                <dt>Artículos</dt>
+                <dd id="venta-articulos">0</dd>
+              </div>
+              <div class="resumen__fila resumen__fila--total">
+                <dt>Total</dt>
+                <dd id="venta-total" aria-live="polite">$ 0,00</dd>
+              </div>
+            </dl>
+            <button class="boton boton--primario boton--bloque" id="venta-confirmar" type="button">Confirmar venta</button>
+            <p class="mensaje mensaje--exito" id="venta-confirmada" role="status" hidden>Listo: la venta se registró correctamente.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="vista" id="historial" aria-labelledby="historial-titulo">
+        <div class="vista__encabezado">
+          <p class="vista__sobretitulo">Consultas</p>
+          <h2 id="historial-titulo">Historial</h2>
+          <p class="vista__descripcion">Ventas confirmadas y acceso al detalle de cada una.</p>
+        </div>
+
+        <section class="tabla-contenedor" aria-labelledby="historial-tabla-titulo" tabindex="0">
+          <table class="tabla" id="tabla-historial">
+            <caption class="tabla__titulo visualmente-oculto" id="historial-tabla-titulo">Ventas registradas</caption>
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Cliente</th>
+                <th scope="col" class="tabla__numero">Total</th>
+                <th scope="col">Detalle</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+        <p class="mensaje mensaje--vacio" id="historial-vacio" role="status" hidden>No hay ventas registradas.</p>
+
+        <section class="detalle" id="detalle-venta" aria-labelledby="detalle-titulo" hidden>
+          <div class="detalle__encabezado">
+            <p class="vista__sobretitulo">Detalle</p>
+            <h3 id="detalle-titulo" tabindex="-1">Venta</h3>
+            <p class="detalle__meta" id="detalle-meta"></p>
+          </div>
+          <section class="tabla-contenedor" aria-labelledby="detalle-tabla-titulo" tabindex="0">
+            <table class="tabla" id="detalle-renglones">
+              <caption class="tabla__titulo visualmente-oculto" id="detalle-tabla-titulo">Renglones de la venta</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Libro</th>
+                  <th scope="col" class="tabla__numero">Cantidad</th>
+                  <th scope="col" class="tabla__numero">Precio unitario</th>
+                  <th scope="col" class="tabla__numero">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
+          <p class="detalle__total">Total: <span id="detalle-total">$ 0,00</span></p>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/catalog.js"></script>
+  <script src="js/books.js"></script>
+  <script src="js/clients.js"></script>
+  <script src="js/sales.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
