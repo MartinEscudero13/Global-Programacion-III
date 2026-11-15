@@ -1,14 +1,28 @@
+# Normalizacion de saltos de linea: el repositorio y el paquete de entrega se
+# guardan en LF. Sin esta regla, `git archive` aplica `core.autocrlf` (true en
+# este equipo) y exporta los archivos de texto con CRLF, lo que rompe los tests
+# que exigen LF y desalinea el paquete del contenido versionado.
+* text=auto eol=lf
+
 # Empaquetado de la entrega: git archive respeta export-ignore.
-# En .gitattributes un patrón de directorio no recursa: se usa `dir/**`.
+# Cada directorio lleva dos patrones: el de la entrada del árbol, que hace que
+# git archive omita el directorio completo, y el de `dir/**`, que marca cada
+# archivo de adentro (un patrón de directorio no recursa en .gitattributes).
 .gitattributes export-ignore
 AGENTS.md export-ignore
 CHANGES.md export-ignore
 .active-orchestrator-state.json export-ignore
+.atl export-ignore
 .atl/** export-ignore
+.opencode export-ignore
 .opencode/** export-ignore
+design-system export-ignore
 design-system/** export-ignore
+docs export-ignore
 docs/** export-ignore
+knowledge-base export-ignore
 knowledge-base/** export-ignore
+openspec export-ignore
 openspec/** export-ignore
 
 backend/AGENTS.md export-ignore
@@ -16,14 +30,23 @@ backend/CHANGES.md export-ignore
 backend/CLAUDE.md export-ignore
 backend/DEPLOY.md export-ignore
 backend/.active-orchestrator-state.json export-ignore
+backend/.atl export-ignore
 backend/.atl/** export-ignore
+backend/.opencode export-ignore
 backend/.opencode/** export-ignore
+backend/design-system export-ignore
 backend/design-system/** export-ignore
+backend/docs export-ignore
 backend/docs/** export-ignore
+backend/evidencia export-ignore
 backend/evidencia/** export-ignore
+backend/knowledge-base export-ignore
 backend/knowledge-base/** export-ignore
+backend/openspec export-ignore
 backend/openspec/** export-ignore
+backend/scripts export-ignore
 backend/scripts/** export-ignore
-backend/test/test_artefactos_despliegue.py export-ignore
-backend/test/test_artefactos_http.py export-ignore
-backend/test/test_artefactos_imagen.py export-ignore
+
+# Los tres tests de artefactos de la etapa anterior viajan en el paquete: se
+# saltan solos cuando el archivo que verifican no existe (DEPLOY.md, scripts/ y
+# evidencia/ quedan fuera del ZIP). Excluirlos dejaría la suite incompleta.
