@@ -22,6 +22,36 @@ No requiere instalación, npm ni servidor.
 
 El proyecto usa HTML, CSS y JavaScript nativos, sin librerías, frameworks ni CDNs.
 
+## Integración con la API
+
+La aplicación habla con la API de la librería a través de una única capa HTTP, `js/api.js`, montada sobre la base `/api`. El mismo origen sirve la web y reenvía `/api/` al backend con Nginx, que recorta el prefijo: no hay CORS ni orígenes externos.
+
+- La barra final de las rutas de colección se conserva: `POST /api/libros/`, no `/api/libros`.
+- Los recursos individuales no llevan barra final: `GET /api/libros/{id}`.
+- `fetch` se usa sólo en `js/api.js`; ningún módulo de vista arma URLs ni lee respuestas crudas.
+
+| Operación del cliente | Petición |
+| --- | --- |
+| `listarLibros({titulo, generoId, limit, offset})` | `GET /api/libros/?limit&offset[&titulo][&genero_id]` |
+| `obtenerLibro(id)` | `GET /api/libros/{id}` |
+| `crearLibro(cuerpo)` | `POST /api/libros/` |
+| `listarTodas('editoriales'\|'generos'\|'libros')` | `GET /api/{coleccion}/?limit=100&offset=N` en bucle |
+| `obtenerAutor(id)` | `GET /api/autores/{id}` |
+| `obtenerCliente(id)` | `GET /api/clientes/{id}` |
+| `crearCliente({nombre, email})` | `POST /api/clientes/` |
+| `crearVenta({cliente_id, renglones})` | `POST /api/ventas/` |
+| `listarVentas({limit, offset})` | `GET /api/ventas/?limit&offset` |
+| `obtenerVenta(id)` | `GET /api/ventas/{id}` |
+
+Códigos de error y mensajes:
+
+- `404` y `409`: se muestra el texto `detail` que devuelve el servidor.
+- `422`: la lista `detail` de FastAPI se traduce a una frase en español con el campo y el motivo; nunca se muestra el arreglo ni `[object Object]`.
+- Fallo de red, respuesta que no es JSON o demora: se informa como error de conexión, distinto de una lista vacía, con reintento manual de la misma consulta.
+- Tiempo máximo por petición: 10 segundos (`AbortController`).
+
+Los importes llegan como string decimal y se conservan así; sólo se convierten al mostrarse. La fecha de una venta llega en ISO 8601 UTC con sufijo `Z` y se muestra en la zona local.
+
 ## Cómo actualizar el proyecto
 
 Si ya tenés el repositorio clonado:

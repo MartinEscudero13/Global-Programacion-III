@@ -39,6 +39,54 @@
     return '$ ' + formatoPrecio.format(Number.isFinite(centavos) ? centavos : 0);
   }
 
+  // Los importes llegan de la API como string decimal; el valor se conserva y
+  // sólo se convierte para mostrar o para estimar el borrador de una venta.
+  function parsearImporte(valor) {
+    if (typeof valor === 'number') {
+      return valor;
+    }
+
+    const texto = String(valor === null || valor === undefined ? '' : valor).trim();
+
+    if (texto === '') {
+      return NaN;
+    }
+
+    return Number(texto.replace(',', '.'));
+  }
+
+  function dosDigitos(numero) {
+    return String(numero).padStart(2, '0');
+  }
+
+  // La API devuelve ISO 8601 en UTC con sufijo Z; se muestra en la zona local
+  // del navegador y se conserva el valor original para `datetime`.
+  function formatearFechaHora(fechaISO) {
+    const texto = String(fechaISO === null || fechaISO === undefined ? '' : fechaISO);
+
+    if (texto === '') {
+      return '';
+    }
+
+    const instante = new Date(texto);
+
+    if (Number.isNaN(instante.getTime())) {
+      return '';
+    }
+
+    return (
+      dosDigitos(instante.getDate()) +
+      '/' +
+      dosDigitos(instante.getMonth() + 1) +
+      '/' +
+      instante.getFullYear() +
+      ' ' +
+      dosDigitos(instante.getHours()) +
+      ':' +
+      dosDigitos(instante.getMinutes())
+    );
+  }
+
   function fechaLocalISO(fecha) {
     const valor = fecha instanceof Date ? fecha : new Date();
     const anio = String(valor.getFullYear());
@@ -125,6 +173,8 @@
     esEmailValido: esEmailValido,
     redondearCentavos: redondearCentavos,
     formatearPrecio: formatearPrecio,
+    parsearImporte: parsearImporte,
+    formatearFechaHora: formatearFechaHora,
     fechaLocalISO: fechaLocalISO,
     formatearFecha: formatearFecha,
     indexarPorId: indexarPorId,
