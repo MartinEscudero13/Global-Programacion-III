@@ -11,6 +11,7 @@
   let autorias = [];
   let autorVerificado = null;
   let opcionesListas = false;
+  let limpiandoFormulario = false;
   let iniciado = false;
 
   function crearCelda(texto, esNumero) {
@@ -92,6 +93,28 @@
 
   function refrescar() {
     return cargarTabla(0);
+  }
+
+  // Después de un alta, la tabla se ubica en la página que contiene el libro
+  // creado: el listado de la API ordena por id y el nuevo queda al final.
+  async function irAlLibroCreado(libroId) {
+    for (let pagina = 0; pagina < 20; pagina += 1) {
+      const libros = await Libreria.api.listarLibros({
+        limit: TAMANO,
+        offset: pagina * TAMANO
+      });
+      const encontrado = libros.some(function (libro) {
+        return libro.id === libroId;
+      });
+
+      if (encontrado || libros.length < TAMANO) {
+        estado.desplazamiento = pagina * TAMANO;
+        renderizarTabla(libros);
+        return;
+      }
+    }
+
+    await cargarTabla(0);
   }
 
   function opcionesDeEditorial() {
@@ -210,10 +233,14 @@
     refs.autoriasLista.replaceChildren(fragmento);
   }
 
-  function limpiarAutor() {
+  function invalidarAutor() {
     autorVerificado = null;
     refs.autorNombre.textContent = '';
     refs.autorAgregar.disabled = true;
+  }
+
+  function limpiarAutor() {
+    invalidarAutor();
     refs.autorId.value = '';
   }
 
@@ -480,7 +507,9 @@
   }
 
   function limpiarFormulario() {
+    limpiandoFormulario = true;
     refs.form.reset();
+    limpiandoFormulario = false;
     autorias = [];
     autorVerificado = null;
     refs.autoriasLista.replaceChildren();
@@ -517,7 +546,7 @@
         'Listo: se registró «' + creado.titulo + '» con el identificador ' + creado.id + '.'
       );
       refs.titulo.focus();
-      await cargarTabla(0);
+      await irAlLibroCreado(creado.id);
       await Libreria.catalogo.refrescar();
     } catch (error) {
       refs.mensaje.textContent = error.mensaje;
@@ -534,7 +563,7 @@
     });
     refs.autorBuscar.addEventListener('click', buscarAutor);
     refs.autorAgregar.addEventListener('click', agregarAutoria);
-    refs.autorId.addEventListener('input', limpiarAutor);
+    refs.autorId.addEventListener('input', invalidarAutor);
     refs.autoriasLista.addEventListener('click', function (evento) {
       const boton = evento.target.closest('button[data-autor-id]');
 
@@ -544,6 +573,10 @@
     });
 
     refs.form.addEventListener('reset', function () {
+      if (limpiandoFormulario) {
+        return;
+      }
+
       window.setTimeout(function () {
         autorias = [];
         autorVerificado = null;

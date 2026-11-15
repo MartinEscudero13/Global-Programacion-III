@@ -9,22 +9,95 @@ Trabajo Práctico Integrador de **Programación III**, Tecnicatura Universitaria
 
 ## Estado del proyecto
 
-**Etapa 1 completada y Ejercicios 3, 4, 5 y 6 implementados.** La aplicación funciona abriendo `public/index.html` con doble clic: catálogo dinámico con filtro, altas de libros y clientes, ventas con renglones editables, historial inmutable y persistencia en `localStorage`.
+**Integración con la API completada.** Las pantallas del primer parcial —catálogo, altas de libros y clientes, venta e historial— funcionan contra la API de la librería con JavaScript nativo. La API es la única fuente de verdad: la aplicación **no usa `localStorage`** ni datos de ejemplo locales.
 
-La verificación manual de los ocho casos del PDF se registra más abajo. No quedan funcionalidades ni etapas pendientes. El trabajo está integrado en `master`.
+La aplicación necesita la API en ejecución detrás del proxy `/api`. Sin backend muestra estados de error de conexión con reintento, no listas vacías.
 
-## Cómo abrir el proyecto
+## Cómo ejecutar el proyecto
 
-No requiere instalación, npm ni servidor.
+1. Levantar PostgreSQL y el backend del repositorio:
 
-1. Descargar o clonar la carpeta del proyecto.
-2. Abrir `public/index.html` con doble clic en el navegador.
+   ```bash
+   cd backend
+   alembic upgrade head
+   python -m app.seed
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
 
-El proyecto usa HTML, CSS y JavaScript nativos, sin librerías, frameworks ni CDNs.
+2. Construir y ejecutar la imagen del frontend:
+
+   ```bash
+   cd frontend
+   docker build -t libreria-frontend .
+   docker run --rm -p 127.0.0.1:8080:80 -e API_UPSTREAM=host.docker.internal:8000 libreria-frontend
+   ```
+
+3. Abrir `http://127.0.0.1:8080/`.
+
+Nginx sirve la web y reenvía `/api/` al backend recortando el prefijo, así que el navegador habla con un solo origen y no hace falta CORS. Abrir `public/index.html` con doble clic ya no alcanza: sin el proxy no hay API.
+
+El proyecto usa HTML, CSS y JavaScript nativos, sin librerías, frameworks, CDNs ni `node_modules` en el entregable.
+
+## Navegación entre vistas
+
+| Vista | Enlace |
+| --- | --- |
+| Catálogo | `#catalogo` |
+| Libros | `#libros` |
+| Clientes | `#clientes` |
+| Ventas | `#ventas` |
+| Historial | `#historial` |
+
+Las cinco vistas conviven en `public/index.html` y se navegan con anclas. El router por hash actualiza `aria-current="location"` y mueve el foco al título de la vista. El enlace «Saltar al contenido» lleva el foco a `main`.
+
+## Funcionalidades
+
+- Catálogo cargado desde `GET /api/libros/` con búsqueda parcial por título, paginación de 20 en 20 y detalle de autorías.
+- Cada tarjeta muestra género (o «Sin clasificar» si es nulo), título, ISBN, editorial y precio formateado; el botón «Ver detalle» consulta `GET /api/libros/{id}` y agrega autorías con nombre, rol y orden.
+- Estados explícitos de carga, lista vacía, búsqueda sin coincidencias, fin de resultados y error de conexión con reintento, tanto en el catálogo como en el listado de libros y en el historial.
+- Alta de libros con stock, editorial, género opcional y autorías verificadas por identificador; validación local antes de enviar y cuerpo exacto del contrato.
+- Alta de clientes con `POST /api/clientes/` y consulta individual por identificador; la tabla muestra los clientes conocidos en la sesión.
+- Venta con borrador en memoria: renglones editables, un solo renglón por libro, artículos y total estimado, cliente verificado por identificador y confirmación con el cuerpo exacto `{cliente_id, renglones}`.
+- La confirmación muestra los importes que devuelve la API; un rechazo 409 o 422 conserva el borrador y vuelve a habilitar el botón.
+- Historial paginado y detalle histórico consultado por identificador; un cambio posterior de precio en el catálogo no altera las ventas registradas.
+- CSS externo en tres archivos, foco visible, contenedores de tabla con desplazamiento propio y diseño adaptable a 320 px y 1280 px.
+- Ocho scripts clásicos enlazados al final del `body`, sin módulos ES.
+
+### Fuera de alcance
+
+El PDF no pide editar ni eliminar libros o clientes: sólo altas y consultas. Los únicos botones de quitar son los de renglones de una venta antes de confirmar. Tampoco se implementan autenticación, carrito persistente ni descuento de stock.
+
+## Datos de prueba
+
+Los datos ficticios se cargan con `python -m app.seed` en el backend. La API del repositorio siembra una editorial, un género, cuatro autores, cuatro libros, dos clientes y una venta de ejemplo.
+
+| Recurso | Contenido del seed |
+| --- | --- |
+| Editorial | Sudamericana (`1`) |
+| Género | Novela (`1`) |
+| Autores | Julio Cortázar (`1`), Ricardo Piglia (`2`), Gabriel García Márquez (`3`), Mario Vargas Llosa (`4`) |
+| Libros | Rayuela (`1`), Antología del cuento latinoamericano (`2`), La ciudad y los perros (`3`), Respiración artificial (`4`) |
+| Clientes | Ana Gómez (`1`), Tomás Ríos (`2`) |
+| Venta | `2`, 2 × Rayuela + 1 × Respiración artificial |
+
+Combinación de prueba: cliente `2` con 2 × libro `1` y 1 × libro `4` da `$ 77.000,00` con los precios del seed.
+
+## Arquitectura de JavaScript
+
+- `js/api.js`: capa HTTP única sobre la base `/api`; arma URLs, envía JSON, parsea respuestas, aplica el tiempo máximo y traduce los errores.
+- `js/utils.js`: formato de precios y fechas, parseo de importes, validación de email, poblado de selectores y actualización de la paginación.
+- `js/catalog.js`: catálogo, búsqueda, paginación, detalle de autorías y estados de la vista.
+- `js/books.js`: alta de libros con autorías verificadas, tabla paginada y opciones de editorial y género.
+- `js/clients.js`: alta de clientes, consulta por identificador y lista de la sesión.
+- `js/sales.js`: borrador de la venta, verificación del cliente, envío y confirmación con importes del servidor.
+- `js/history.js`: historial paginado y detalle de cada venta.
+- `js/app.js`: arranque asíncrono tolerante de las vistas y router por hash.
+
+Los scripts son clásicos (sin `type="module"`) y se cargan en ese orden al final del `body`. Cada uno es una IIFE con `'use strict'` que publica su API en `window.Libreria`. Todo dato proveniente del usuario o de la API se inserta con `textContent`.
 
 ## Integración con la API
 
-La aplicación habla con la API de la librería a través de una única capa HTTP, `js/api.js`, montada sobre la base `/api`. El mismo origen sirve la web y reenvía `/api/` al backend con Nginx, que recorta el prefijo: no hay CORS ni orígenes externos.
+La aplicación habla con la API a través de una única capa HTTP, `js/api.js`, montada sobre la base `/api`. El mismo origen sirve la web y reenvía `/api/` al backend con Nginx, que recorta el prefijo: no hay CORS ni orígenes externos.
 
 - La barra final de las rutas de colección se conserva: `POST /api/libros/`, no `/api/libros`.
 - Los recursos individuales no llevan barra final: `GET /api/libros/{id}`.
@@ -60,200 +133,56 @@ La API no expone `GET /clientes/` ni `GET /autores/`: sólo admite la consulta i
 - En la vista de clientes, `GET /api/clientes/{id}` muestra nombre y email y suma el cliente a la tabla. Esa tabla lista **los clientes conocidos en la sesión** (los dados de alta o consultados), no un inventario completo, porque no existe un listado en el contrato.
 - En la venta, el cliente se confirma sólo después de consultarlo: el nombre devuelto por la API queda visible y la confirmación exige esa verificación.
 
-## Cómo actualizar el proyecto
+## Sin datos en el navegador
 
-Si ya tenés el repositorio clonado:
+La aplicación no usa localStorage ni ningún otro almacenamiento del navegador. Libros, clientes, ventas, editoriales, géneros y autores provienen siempre de la API.
 
-1. `git switch master`
-2. `git pull`
-3. Abrir `public/index.html` con doble clic.
+Las claves `libreria.v1.libros`, `libreria.v1.clientes` y `libreria.v1.ventas` de la etapa anterior dejaron de leerse y pueden descartarse: no alteran ninguna vista. El borrador de una venta vive sólo en memoria y se pierde al recargar, como habilita la consigna.
 
-No hace falta instalar dependencias ni iniciar un servidor. Los cambios de cada etapa se integran en `master`.
+## Pruebas automatizadas
 
-## Navegación entre vistas
+El frontend tiene un arnés propio con el runner integrado de Node, sin dependencias: un DOM simulado, un fixture del `body` y un cargador que evalúa los scripts clásicos en un contexto `vm` con un `fetch` falso.
 
-| Vista | Enlace |
+```bash
+node --test "frontend/test/**/*.test.mjs"
+```
+
+El comando se ejecuta desde la raíz del repositorio. Node 24 interpreta el argumento de `--test` como un patrón glob y no expande directorios, por eso se indica el patrón completo.
+
+| Archivo | Responsabilidad |
 | --- | --- |
-| Catálogo | `#catalogo` |
-| Libros | `#libros` |
-| Clientes | `#clientes` |
-| Ventas | `#ventas` |
-| Historial | `#historial` |
+| `test/dom-simulado.mjs` | Nodos, atributos, selectores, eventos con burbujeo, foco y `form.reset()` |
+| `test/pagina.mjs` | Árbol del `body` con los mismos ids que `index.html` |
+| `test/cargar-modulos.mjs` | Lee los `src` del HTML y los evalúa en un contexto `vm` |
+| `test/ayudas.mjs` | Respuestas falsas, `fetch` que registra pedidos y espera de microtareas |
+| `test/*.test.mjs` | Un archivo por módulo más `estatico.test.mjs`, `pagina.test.mjs` y `arranque.test.mjs` |
 
-Las cinco vistas conviven en `public/index.html` y se navegan con anclas. El router por hash actualiza `aria-current="location"` y mueve el foco al título de la vista. El enlace «Saltar al contenido» lleva el foco a `main`.
+Las guardas estáticas verifican que los ids del fixture coinciden con `index.html`, que los scripts son los ocho del diseño y que en `public/js/` no aparecen `innerHTML`, `insertAdjacentHTML`, `document.write`, `localStorage`, `data.js`, `store.js` ni `Libreria.datos`.
 
-## Funcionalidades
-
-### Implementadas
-
-- Estructura semántica con `header`, `nav`, `main`, secciones, formularios y tablas.
-- Catálogo generado por JavaScript desde `js/data.js`, con seis libros y todos sus datos: título, ISBN, editorial, género, autores y precio.
-- Filtro por título sin distinguir mayúsculas, con coincidencias parciales y recorte de espacios; estados de catálogo vacío y búsqueda sin resultados.
-- Alta de libros con título, ISBN único, precio, editorial, género opcional y autores múltiples.
-- Validación de libros: campos obligatorios, ISBN único comparado sin espacios ni guiones, precio numérico mayor que cero y redondeado a centavos, editorial y autores existentes, y al menos un autor.
-- Alta de clientes con nombre completo y email válido y único; el email se compara con `trim` y sin distinguir mayúsculas.
-- Opciones de editorial, género, autores y selectores de venta generadas desde `js/data.js`; el género vacío se muestra como «Sin clasificar».
-- Actualización sin recarga de las tablas, del catálogo y de los selectores; las selecciones de venta no se preseleccionan.
-- Errores por campo, resumen accesible con `role="alert"`, mensajes de éxito con `role="status"` y foco en el primer campo inválido.
-- Ventas con selección de cliente y libro, cantidad entera mayor que cero y precio unitario tomado del catálogo al agregar el renglón, que se conserva sin releerlo al confirmar.
-- Renglones editables y eliminables antes de confirmar; un libro repetido actualiza la cantidad del renglón existente.
-- Cálculo de subtotal por renglón y total como suma de subtotales, con redondeo a centavos y dos decimales; el resumen de la venta muestra artículos y total.
-- Confirmación bloqueada sin cliente, sin renglones o con cantidades inválidas.
-- Al confirmar se guarda identificador, fecha, cliente, renglones con título, ISBN, precio unitario y subtotal históricos, y total.
-- Historial con identificador, fecha, cliente y total; el botón «Ver detalle» muestra los renglones y el total de la venta.
-- Persistencia de libros, clientes y ventas en `localStorage`, con carga de ejemplos solo en el primer inicio.
-- CSS externo en tres archivos, identidad visual, diseño adaptable a 320 px y 1280 px, foco visible y contenedores de tabla con desplazamiento propio.
-- Nueve scripts clásicos externos (`data.js`, `utils.js`, `store.js`, `catalog.js`, `books.js`, `clients.js`, `sales.js`, `history.js`, `app.js`), sin `fetch` ni librerías.
-- Sin imágenes externas y sin estilos inline.
-
-### Pendientes
-
-No hay funcionalidades pendientes de la consigna.
-
-El PDF no exige editar ni eliminar libros o clientes: el Ejercicio 4 solo pide altas. Los únicos botones de quitar son los de renglones de una venta antes de confirmar.
-
-## Datos de ejemplo
-
-Estos datos viven en `js/data.js` como arrays de objetos con identificadores estables. En el primer inicio se copian a `localStorage`; en las siguientes aperturas se recuperan los datos guardados. El catálogo, las tablas de libros y clientes y los selectores de venta se generan a partir de esos arrays. La venta no está precargada: se genera al confirmar.
-
-**Editoriales:** Ediciones del Sur (`ed1`) y Editorial Horizonte (`ed2`).
-
-**Géneros:** Narrativa (`g1`) y Ensayo (`g2`).
-
-**Autores:** Ana Belén Ríos (`a1`), Carlos Medina (`a2`) y Lucía Ferrer (`a3`).
-
-| Libro | ISBN | Precio | Editorial | Género | Autores |
-| --- | --- | ---: | --- | --- | --- |
-| El jardín de las horas (`l1`) | 978-950-01-0001-1 | 1500 | Ediciones del Sur | Narrativa | Ana Belén Ríos |
-| Cartas del sur (`l2`) | 978-950-01-0002-8 | 1500 | Editorial Horizonte | Narrativa | Carlos Medina, Lucía Ferrer |
-| La memoria del río (`l3`) | 978-950-01-0003-5 | 2000 | Ediciones del Sur | Narrativa | Ana Belén Ríos |
-| Oficio de mirar (`l4`) | 978-950-01-0004-2 | 1800 | Editorial Horizonte | Ensayo | Carlos Medina |
-| Manual del lector (`l5`) | 978-950-01-0005-9 | 2500 | Ediciones del Sur | Sin clasificar | Lucía Ferrer |
-| Voces del patio (`l6`) | 978-950-01-0006-6 | 1200 | Editorial Horizonte | Narrativa | Ana Belén Ríos, Carlos Medina |
-
-En la tabla de datos de este README los precios se muestran como valores numéricos para leer el ejemplo; la aplicación los muestra con dos decimales y separador de miles.
-
-**Clientes:** María González (`c1`, `maria.gonzalez@example.com`), Jorge Ramírez (`c2`, `jorge.ramirez@example.com`) y Sofía Herrera (`c3`, `sofia.herrera@example.com`).
-
-**Combinación de prueba:** 2 × «El jardín de las horas» (1500) + 1 × «La memoria del río» (2000) = 5000. La venta resultante recibe el identificador `V-0001` en un almacenamiento nuevo.
-
-## Arquitectura de JavaScript
-
-- `js/data.js`: semillas de libros, editoriales, géneros, autores y clientes.
-- `js/utils.js`: normalización de búsqueda, ISBN y email; redondeo, formato de precios y fechas; índices por ID; generación de identificadores y poblado de selectores.
-- `js/store.js`: carga y guardado de libros, clientes y ventas en `localStorage`.
-- `js/catalog.js`: render del catálogo, filtro y estados.
-- `js/books.js`: alta, validación, tabla de libros y selector de venta.
-- `js/clients.js`: alta, validación, tabla de clientes y selector de venta.
-- `js/sales.js`: composición de renglones, cantidades, cálculos, confirmación y persistencia de ventas.
-- `js/history.js`: historial y detalle inmutable de ventas.
-- `js/app.js`: carga del storage, arranque de módulos y router por hash.
-
-Los scripts son clásicos (sin módulos ES) y se cargan al final de `public/index.html` en ese orden. Todo dato se inserta con `textContent`. Las tablas y los selectores se regeneran con `refrescar()`.
-
-## Almacenamiento local
-
-La aplicación usa estas claves:
-
-- `libreria.v1.libros`
-- `libreria.v1.clientes`
-- `libreria.v1.ventas`
-
-`libreria.v1.libros` guarda un array de libros con esta estructura:
-
-```js
-{
-  id: 'l1',
-  titulo: 'El jardín de las horas',
-  isbn: '978-950-01-0001-1',
-  precio: 1500,
-  editorialId: 'ed1',
-  generoId: 'g1',
-  autorIds: ['a1']
-}
-```
-
-| Campo | Tipo | Significado |
-| --- | --- | --- |
-| `id` | string | Identificador estable con formato `lN` |
-| `titulo` | string | Título tal como se muestra en el catálogo |
-| `isbn` | string | ISBN normalizado, sin espacios ni guiones; único dentro del catálogo |
-| `precio` | number | Precio vigente en pesos, redondeado a centavos |
-| `editorialId` | string | Referencia a una editorial del catálogo (`ed1`, `ed2`) |
-| `generoId` | string o `null` | Referencia a un género (`g1`, `g2`); `null` se muestra como «Sin clasificar» |
-| `autorIds` | string[] | Uno o más ids de autor (`a1`, `a2`, `a3`) |
-
-El campo `precio` de esta clave es el precio **vigente** del catálogo. La venta, en cambio, guarda una copia del precio unitario al momento de agregar el renglón: modificar `libreria.v1.libros` cambia el catálogo, nunca las ventas ya confirmadas.
-
-`libreria.v1.clientes` guarda un array de clientes con `id` (`cN`), `nombre` y `email`. `libreria.v1.ventas` guarda las ventas confirmadas con esta estructura:
-
-```js
-{
-  id: 'V-0001',
-  fecha: '2026-10-21',
-  clienteId: 'c1',
-  clienteNombre: 'María González',
-  renglones: [
-    {
-      libroId: 'l1',
-      titulo: 'El jardín de las horas',
-      isbn: '978-950-01-0001-1',
-      cantidad: 2,
-      precioUnitario: 1500,
-      subtotal: 3000
-    }
-  ],
-  total: 3000
-}
-```
-
-`localStorage` guarda los datos en el navegador del usuario. Su contenido depende del navegador, del perfil y de la ubicación desde la que se abre el archivo, y no se comparte entre usuarios, perfiles ni equipos. Si se borran los datos del sitio, la información se pierde.
-
-Los ejemplos se cargan solo cuando la clave no existe. Al recargar se recuperan los datos guardados sin duplicar las semillas.
-
-### Cómo reproducir la comprobación del precio histórico
-
-1. Confirmar una venta y anotar el precio unitario, los subtotales y el total.
-2. Abrir las herramientas de desarrollo del navegador, pestaña **Application (Aplicación) → Local Storage**.
-3. Editar únicamente el campo `precio` del libro vendido dentro de `libreria.v1.libros`; no modificar ni borrar `libreria.v1.ventas`.
-4. Recargar la página y abrir el detalle de la venta anterior.
-
-El detalle debe conservar el precio unitario, los subtotales y el total confirmados, aunque el catálogo tenga otro precio.
+El arnés vive en `frontend/test/` y queda fuera del paquete de entrega por `export-ignore`.
 
 ## Comprobaciones realizadas
 
-Estas comprobaciones se ejecutaron el 21/10/2026 abriendo `public/index.html` desde el sistema de archivos: las de comportamiento se recorrieron en Chrome 155 con un perfil temporal limpio y las de sintaxis y empaquetado con Node 20 y Git.
+Comprobaciones ejecutadas el **15/11/2026** contra la API real (`python -m app.seed` sobre PostgreSQL 18, Uvicorn en `:8000`) y el contenedor de Nginx en `http://127.0.0.1:8080` con `API_UPSTREAM=host.docker.internal:8000`. El recorrido se hizo con Chrome 157 en modo headless.
 
 | Comprobación | Resultado observado |
 | --- | --- |
-| Carga inicial | 6 libros, 3 clientes, 0 ventas; 6 tarjetas y 6 filas de libros; 3 filas de clientes; renglones e historial vacíos; detalle oculto; selectores de venta en «Seleccioná…»; total `$ 0,00` y artículos `0`. |
-| Ancho de 320 px | `scrollWidth = clientWidth = 320`; `scrollX = 0`; catálogo en una columna; sin scroll horizontal de página. Las tablas de libros y renglones tienen contenedor de 252 px y contenido de 576 px; historial 286/576; detalle 249/576; clientes entra en 252 px. |
-| Ancho de 1280 px | `scrollWidth = clientWidth = 1280`; `scrollX = 0`; catálogo en tres columnas; las tablas entran en su contenedor (603 px y 1086 px para el historial), sin desplazamiento horizontal de página. |
-| Navegación por teclado | El primer `Tab` enfoca «Saltar al contenido» y lo muestra; al activarlo, el foco pasa a `main` con contorno visible de 3 px. Los enlaces de navegación actualizan el foco al `h2` de la vista. |
-| Foco y tablas | Foco visible en enlaces, campos, botones, región de tabla y detalle. Las regiones de tabla reciben foco y se desplazan con el teclado cuando corresponde. |
-| Consola y recursos | 0 errores de JavaScript y 0 errores de consola durante cargas, altas, ventas, recarga y apertura del detalle. Las tres hojas CSS y los nueve scripts cargaron correctamente; no hay `fetch` ni recursos externos. |
-| Validación | Se rechazan formularios incompletos, ISBN duplicado, email inválido o duplicado, cantidades cero, negativas o decimales y ventas sin cliente o sin renglones. |
-| Auditoría del HTML | 75 IDs únicos, 0 duplicados y 0 referencias `aria-*`/`label[for]` rotas; 5 tablas con `caption` y 22 `th`; 4 formularios, 1 fieldset y 0 opciones preseleccionadas; 0 estilos inline y 0 recursos externos. |
-| Accesibilidad generada | Los checkboxes de autores tienen `label`, `aria-describedby` válido y foco visible; los errores usan `aria-invalid` y texto asociado. |
-| Confirmación con precio capturado | Se agregó un renglón de `$ 1.500,00`, se cambió el precio del catálogo a `9999` antes de confirmar y la venta persistió `precioUnitario 1500`, subtotal `3000` y total `3000`. Se repitió con precio decreciente (2000 → 500) y con cambio de cantidad posterior (3 × 1500 = 4500). |
-| Paquete de entrega | `git archive --format=zip` produce un paquete con `public/index.html`, `public/css/`, `public/js/` y `README.md`, además del `Dockerfile`, el `.dockerignore` y la plantilla `default.conf.template` de `frontend/`; `openspec/`, `knowledge-base/`, `docs/`, `.atl/`, `AGENTS.md`, `CHANGES.md` y `.active-orchestrator-state.json` quedan excluidos por `export-ignore`. |
-| Resumen de venta | El resumen muestra sólo «Artículos» y «Total»; 3 artículos dan `$ 5.000,00` y al pasar una cantidad a 3 el total sube a `$ 6.500,00`. La columna «Subtotal» se conserva en cada renglón. |
-| Teclado y foco | El primer `Tab` enfoca «Saltar al contenido» con contorno sólido de 3 px; el segundo llega al enlace «Catálogo». |
-
-## Casos manuales
-
-Ningún caso se registra como aprobado sin haberlo ejecutado. Los ocho casos se ejecutaron sobre la versión final.
-
-| # | Caso | Resultado esperado | Resultado observado |
-| --- | --- | --- | --- |
-| 1 | Búsqueda con parte del título en mayúsculas; luego búsqueda vacía y texto inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Aprobado: «JARDÍN» mostró 1 libro; «  memoria  » mostró 1 libro; «zzz» mostró el mensaje de sin resultados; la búsqueda vacía mostró los 6 libros. |
-| 2 | Alta de libro con ISBN existente y luego con ISBN nuevo | El duplicado se rechaza; el válido aparece en catálogo y en la selección de venta | Aprobado: `978 950 01 0001 1` se rechazó con «Ya existe un libro con ese ISBN.». El alta de «Cuaderno de pruebas» (`978-950-01-0099-9`, precio `1234.567` → `$ 1.234,57`) agregó la fila, la tarjeta del catálogo y la opción de venta `l7`. |
-| 3 | Alta de cliente con email inválido, email existente en mayúsculas y email nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | Aprobado: `lucia.example.com` se rechazó con «Ingresá un email válido.»; `MARIA.GONZALEZ@EXAMPLE.COM` se rechazó como duplicado; `Lucia.Prueba@Example.com` se guardó y agregó la fila y la opción `c4`. También se verificó con `  Espacios@Example.com  `: se guardó como `Espacios@Example.com` y el nombre perdió los espacios exteriores. |
-| 4 | Venta sin cliente, cantidad cero, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Aprobado: sin cliente mostró «Seleccioná un cliente para confirmar la venta.» y no creó ventas; cantidades 0, -1 y 1.5 mostraron «La cantidad debe ser un número entero mayor que cero.» y no agregaron renglones; repetir el libro dejó 1 renglón con cantidad 2 y total `$ 3.000,00`. |
-| 5 | Venta válida: dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle conservado en el historial | Aprobado: subtotales `$ 3.000,00` y `$ 2.000,00`, artículos 3, total `$ 5.000,00`; al confirmar se creó `V-0001`, el formulario quedó limpio y el historial mostró 1 venta. El detalle conservó los dos renglones y el total. |
-| 6 | Venta confirmada y cambio exclusivo del precio de catálogo guardado | Tras recargar, el precio unitario, los subtotales y el total de esa venta conservan los valores confirmados | Aprobado: se cambió `l1` de 1500 a 9999 en `libreria.v1.libros`, se recargó y el detalle siguió mostrando `$ 1.500,00`, `$ 3.000,00` y total `$ 5.000,00`. La venta guardada no se modificó. También se cambió el precio del catálogo entre el agregado del renglón y la confirmación: la venta guardó el precio capturado al agregar y no el nuevo. |
-| 7 | Recarga después de altas y venta | Se recuperan los datos sin duplicar ejemplos ni ventas | Aprobado: antes y después de recargar se conservaron 7 libros, 4 clientes y 1 venta; las tablas y el historial mantuvieron 7, 4 y 1 filas, respectivamente, sin duplicar semillas. |
-| 8 | Navegación por teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tabla con desplazamiento propio si lo necesita | Aprobado: 320/320 y 1280/1280 sin scroll horizontal de página; foco visible en skip, `main`, enlaces y campos; el detalle se abre con foco en su título; las tablas se desplazan dentro de su contenedor. |
+| Suite del frontend | `node --test "frontend/test/**/*.test.mjs"`: 122 casos, 0 fallos. |
+| Sintaxis | `node --check` sobre los ocho archivos de `public/js/`: código 0. |
+| Catálogo y paginación | 20 tarjetas en la página 1 con «Anterior» deshabilitado; «Siguiente» mostró 11 tarjetas y quedó deshabilitado; «Anterior» volvió a las 20 con `offset=0`. |
+| Búsqueda | «rayuela» mostró 1 tarjeta; «zzz» mostró el mensaje de sin coincidencias y conservó el texto; borrar el filtro volvió a 20 tarjetas. |
+| Detalle de libro | «Rayuela» con ISBN, Sudamericana, Novela, `$ 25.000,00`, stock 10 y la autoría «Julio Cortázar · autor · orden 1». El cierre ocultó el detalle. |
+| Alta de libro | «Crónica del sur» con stock 3, sin género y una autoría se registró con el identificador 39; el formulario quedó limpio; la tabla se ubicó en la página 2 con el libro visible y el catálogo lo mostró como «Sin clasificar» con `$ 1.234,50`. |
+| 409 de ISBN | Repetir el ISBN mostró «El ISBN ya está registrado», conservó los campos y no informó un alta exitosa. |
+| Alta de cliente | «Prueba Navegador» se registró con el identificador 13; repetir el email mostró «El email ya está registrado» conservando el valor. |
+| Consulta de cliente | El identificador 2 mostró «Tomás Ríos · tomas@example.com» y sumó una segunda fila a la lista de la sesión. |
+| Venta | Cliente 2 verificado por nombre, dos renglones (2 × Rayuela y 1 × Respiración artificial), estimación `$ 77.000,00` y confirmación de la venta 14 con precio unitario, subtotales y total del servidor. El borrador quedó vacío. |
+| 422 de renglón repetido | Con el cuerpo duplicado en el camino hacia la API, el servidor respondió 422 y la vista mostró «el libro no puede repetirse en la venta» conservando los dos renglones y el cliente, con el botón habilitado. |
+| 409 de cliente inexistente | Con el cliente cambiado a 999 en el camino, la vista mostró «El cliente indicado no existe» y conservó el borrador completo. |
+| Recarga y detalle | Después de recargar, el historial mostró 7 ventas y el detalle de la venta 14 mantuvo fecha local, cliente, renglones y total `$ 77.000,00`. |
+| Precio histórico | `PATCH /api/libros/1` con precio `99000.00`, recarga y reapertura del detalle: la venta 14 siguió en `$ 77.000,00` y `$ 25.000,00` por unidad. |
+| Consola | 0 errores de JavaScript y 0 excepciones. Sólo 4 avisos de red de Chrome por las respuestas 409 y 422 provocadas a propósito. |
+| Anchos | `document.documentElement.scrollWidth === clientWidth` en 1280 px (1280/1280) y en 320 px (320/320); sin desplazamiento horizontal de página. |
 
 ## Imágenes
 
@@ -261,4 +190,4 @@ No se utilizan imágenes externas ni recursos gráficos ajenos. Si en etapas pos
 
 ## Nota sobre esta etapa
 
-La aplicación completa el alcance funcional del PDF: datos locales, catálogo y filtro, altas validadas, venta simulada, historial inmutable y persistencia. El detalle de una venta se genera desde la copia histórica guardada al confirmar, no desde el precio actual del catálogo. El README debe mantenerse actualizado si se modifica el contrato de IDs o el flujo de datos.
+La aplicación reutiliza las pantallas del primer parcial conectadas a FastAPI: los libros, clientes y ventas confirmadas provienen de la API y quedan en PostgreSQL. El borrador de la venta es el único estado que vive en el navegador, y sólo en memoria. El README debe mantenerse actualizado si cambia el contrato de la API o el orden de los scripts.

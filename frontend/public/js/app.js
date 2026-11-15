@@ -2,6 +2,7 @@
   'use strict';
 
   const Libreria = (window.Libreria = window.Libreria || {});
+  const VISTAS = ['catalogo', 'libros', 'clientes', 'ventas', 'historial'];
 
   function iniciarRouter() {
     const enlaces = Array.prototype.slice.call(
@@ -52,13 +53,30 @@
     actualizar(false);
   }
 
+  // Cada vista arranca por su cuenta: si una consulta falla, su módulo dibuja
+  // el estado de error y las demás siguen funcionando.
+  function iniciarVistas() {
+    return Promise.all(
+      VISTAS.map(function (nombre) {
+        const modulo = Libreria[nombre];
+
+        if (!modulo || typeof modulo.iniciar !== 'function') {
+          return Promise.resolve();
+        }
+
+        return Promise.resolve()
+          .then(function () {
+            return modulo.iniciar();
+          })
+          .catch(function () {
+            return undefined;
+          });
+      })
+    );
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
-    Libreria.store.iniciar();
-    Libreria.catalogo.iniciar();
-    Libreria.libros.iniciar();
-    Libreria.clientes.iniciar();
-    Libreria.ventas.iniciar();
-    Libreria.historial.iniciar();
     iniciarRouter();
+    iniciarVistas();
   });
 })();

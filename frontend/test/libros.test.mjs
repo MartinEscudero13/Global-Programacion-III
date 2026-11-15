@@ -606,3 +606,75 @@ test('el error de la tabla muestra reintento y vuelve a pedir la misma página',
     '/api/libros/?limit=20&offset=0'
   );
 });
+
+test('escribir en el identificador invalida la verificación sin borrar el valor', async () => {
+  const { documento, elemento } = await montarLibros();
+
+  elemento('libro-autor-id').value = '4';
+  elemento('libro-autor-id').dispatchEvent(documento.crearEvento('input'));
+
+  assert.equal(elemento('libro-autor-id').value, '4');
+
+  elemento('libro-autor-buscar').dispatchEvent(documento.crearEvento('click'));
+  await asentar();
+
+  assert.ok(textoDe(elemento('libro-autor-nombre')).indexOf('Lucía Ferrer') !== -1);
+  assert.equal(elemento('libro-autor-agregar').disabled, false);
+
+  elemento('libro-autor-id').value = '5';
+  elemento('libro-autor-id').dispatchEvent(documento.crearEvento('input'));
+
+  assert.equal(textoDe(elemento('libro-autor-nombre')), '');
+  assert.equal(elemento('libro-autor-agregar').disabled, true);
+});
+
+test('tras un alta la tabla se ubica en la página donde quedó el libro creado', async () => {
+  const viejos = Array.from({ length: 25 }, function (_, indice) {
+    return {
+      id: indice + 1,
+      isbn: '978-950-00-' + String(indice + 1).padStart(4, '0') + '-1',
+      titulo: 'Libro ' + (indice + 1),
+      precio: '1000.00',
+      stock: 1,
+      editorial: EDITORIALES[0],
+      genero: null
+    };
+  });
+  const nuevo = {
+    id: 99,
+    isbn: '978-950-00-0099-9',
+    titulo: 'Libro nuevo',
+    precio: '1500.00',
+    stock: 3,
+    editorial: EDITORIALES[0],
+    genero: null
+  };
+  let creado = false;
+  const { documento, elemento } = await montarLibros(function (url, opciones) {
+    if (url === '/api/libros/' && opciones.method === 'POST') {
+      creado = true;
+      return respuestaJson(nuevo, 201);
+    }
+
+    if (url.indexOf('/api/libros/') === 0 && url.indexOf('offset') !== -1) {
+      const libros = creado ? viejos.concat([nuevo]) : viejos;
+      const coincidencia = /offset=(\d+)/.exec(url);
+      const desplazamiento = Number(coincidencia[1]);
+
+      return respuestaJson(libros.slice(desplazamiento, desplazamiento + 20));
+    }
+
+    return undefined;
+  });
+
+  completarFormulario(elemento);
+  await agregarAutor(documento, elemento, 4, 'autor');
+  enviarAlta(documento);
+  await asentar(12);
+
+  const filas = documento.querySelectorAll('#tabla-libros tbody tr');
+
+  assert.equal(elemento('libros-pagina').textContent, 'Página 2');
+  assert.equal(filas.length, 6);
+  assert.ok(textoDe(filas[5]).indexOf('Libro nuevo') !== -1, textoDe(filas[5]));
+});

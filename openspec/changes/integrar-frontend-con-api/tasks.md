@@ -157,52 +157,52 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
 
 ## 6. Ventas
 
-- [ ] 6.1 Reemplazar en el HTML y el fixture el selector de cliente por `#venta-cliente-id`, `#venta-buscar-cliente`, `#venta-cliente-nombre`, `#venta-cliente-error` y agregar `#venta-envio`.
+- [x] 6.1 Reemplazar en el HTML y el fixture el selector de cliente por `#venta-cliente-id`, `#venta-buscar-cliente`, `#venta-cliente-nombre`, `#venta-cliente-error` y agregar `#venta-envio`.
   - RED: modificar el HTML sin el fixture; `node --test frontend/test` falla en la guarda de ids.
   - GREEN: completar el fixture; pasa.
   - TRIANGULACIÓN: el selector de libro sigue presente y el nuevo campo de cliente tiene `label` y `aria-describedby`; pasa.
-- [ ] 6.2 Implementar la verificación del cliente: consultar `GET /api/clientes/{id}`, mostrar el nombre, permitir confirmar solo con el cliente verificado y mostrar el 404 sin borrar los renglones.
+- [x] 6.2 Implementar la verificación del cliente: consultar `GET /api/clientes/{id}`, mostrar el nombre, permitir confirmar solo con el cliente verificado y mostrar el 404 sin borrar los renglones.
   - RED: `frontend/test/ventas.test.mjs` con 200, 404 y confirmación sin verificar; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: cambiar el identificador después de verificar invalida el nombre mostrado hasta una nueva consulta.
-- [ ] 6.3 Poblar el selector de libros de la venta con `listarTodas('libros')`, mostrando título e ISBN, y avisar si la guarda deja la lista incompleta.
+- [x] 6.3 Poblar el selector de libros de la venta con `listarTodas('libros')`, mostrando título e ISBN, y avisar si la guarda deja la lista incompleta.
   - RED: casos en `ventas.test.mjs` con dos libros y con `truncado: true`; fallan.
   - GREEN: implementar la carga y el aviso; pasan.
   - TRIANGULACIÓN: el fallo de carga muestra error con reintento y no un selector vacío sin explicación.
-- [ ] 6.4 Implementar el borrador en memoria: agregar renglón con cantidad entera positiva, actualizar cantidad si el libro ya está, rechazar cantidades inválidas, quitar renglones y mostrar artículos y total estimado.
+- [x] 6.4 Implementar el borrador en memoria: agregar renglón con cantidad entera positiva, actualizar cantidad si el libro ya está, rechazar cantidades inválidas, quitar renglones y mostrar artículos y total estimado.
   - RED: casos en `ventas.test.mjs` para agregar, duplicado, cantidad `0`, `-2`, `1.5`, quitar y resumen; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: cambiar la cantidad a 3 recalcula subtotal y estimación sin peticiones.
-- [ ] 6.5 Implementar la confirmación: validar cliente verificado, renglones y cantidades, enviar el cuerpo exacto, deshabilitar el botón y anunciar el envío; con 201 mostrar identificador, fecha local, cliente, precios unitarios, subtotales y total del servidor, limpiar el borrador y refrescar el historial.
+- [x] 6.5 Implementar la confirmación: validar cliente verificado, renglones y cantidades, enviar el cuerpo exacto, deshabilitar el botón y anunciar el envío; con 201 mostrar identificador, fecha local, cliente, precios unitarios, subtotales y total del servidor, limpiar el borrador y refrescar el historial.
   - RED: casos en `ventas.test.mjs` que comparan el cuerpo, el estado `disabled` durante la promesa pendiente y los importes del 201; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: una respuesta con importes distintos a los locales muestra los del servidor y no los calculados.
-- [ ] 6.6 Implementar el rechazo: con 409 o 422 conservar cliente y renglones, mostrar el mensaje del servidor, rehabilitar el botón y no modificar el historial.
+- [x] 6.6 Implementar el rechazo: con 409 o 422 conservar cliente y renglones, mostrar el mensaje del servidor, rehabilitar el botón y no modificar el historial.
   - RED: casos en `ventas.test.mjs` con 409 y 422 que verifican el borrador y las filas del historial; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: tras el rechazo se corrige un renglón y el reenvío usa el cuerpo corregido.
-- [ ] 6.7 Refactorizar el armado y la validación del cuerpo de la venta en funciones internas sin cambiar el comportamiento.
+- [x] 6.7 Refactorizar el armado y la validación del cuerpo de la venta en funciones internas sin cambiar el comportamiento.
   - Verificación: `node --test frontend/test` sigue en verde y `node --check frontend/public/js/sales.js` sale con código 0.
 
 ## 7. Historial
 
-- [ ] 7.1 Agregar al HTML y al fixture la paginación y los estados del historial (`#historial-cargando`, `#historial-error`, `#historial-reintentar`, `#historial-paginacion`, `#historial-anterior`, `#historial-siguiente`, `#historial-pagina`, `#detalle-error`, `#detalle-reintentar`).
+- [x] 7.1 Agregar al HTML y al fixture la paginación y los estados del historial (`#historial-cargando`, `#historial-error`, `#historial-reintentar`, `#historial-paginacion`, `#historial-anterior`, `#historial-siguiente`, `#historial-pagina`, `#detalle-error`, `#detalle-reintentar`).
   - RED: agregar ids al HTML sin el fixture; `node --test frontend/test` falla en la guarda.
   - GREEN: completar el fixture; pasa.
   - TRIANGULACIÓN: el detalle mantiene sus ids y su `hidden` inicial; pasa.
-- [ ] 7.2 Implementar el listado con `GET /api/ventas/?limit=20&offset=0`, «Anterior/Siguiente» con el criterio compartido, estado vacío, carga y error con reintento.
+- [x] 7.2 Implementar el listado con `GET /api/ventas/?limit=20&offset=0`, «Anterior/Siguiente» con el criterio compartido, estado vacío, carga y error con reintento.
   - RED: `frontend/test/historial.test.mjs` con 20 ventas, 3 ventas, 0 ventas y `fetch` que falla; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: avanzar a la segunda página usa `offset=20` y «Anterior» vuelve a `offset=0`.
-- [ ] 7.3 Implementar el detalle con `GET /api/ventas/{id}`: fecha local, cliente, renglones con precio unitario y subtotal, y total; sin leer datos locales.
+- [x] 7.3 Implementar el detalle con `GET /api/ventas/{id}`: fecha local, cliente, renglones con precio unitario y subtotal, y total; sin leer datos locales.
   - RED: casos en `historial.test.mjs` que comparan los importes del contrato; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: una venta con dos renglones muestra los dos subtotales y el total de la respuesta.
-- [ ] 7.4 Implementar el error del detalle sin romper el historial: mensaje con reintento y tabla del historial intacta.
+- [x] 7.4 Implementar el error del detalle sin romper el historial: mensaje con reintento y tabla del historial intacta.
   - RED: caso con `fetch` que falla solo en el detalle; falla.
   - GREEN: implementar; pasa.
   - TRIANGULACIÓN: el reintento exitoso muestra el detalle sin volver a pedir la página del historial.
-- [ ] 7.5 Verificar la persistencia del detalle simulando una recarga: reconstruir la página, recargar los módulos con la misma API falsa y abrir la misma venta.
+- [x] 7.5 Verificar la persistencia del detalle simulando una recarga: reconstruir la página, recargar los módulos con la misma API falsa y abrir la misma venta.
   - RED: caso en `historial.test.mjs` que exige los mismos importes tras la recarga; falla si algo se guarda en memoria del módulo.
   - GREEN: implementar lo que falte; pasa.
   - TRIANGULACIÓN: el detalle de una venta con precio de catálogo cambiado conserva sus importes.

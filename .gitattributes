@@ -50,3 +50,7 @@ backend/scripts/** export-ignore
 # Los tres tests de artefactos de la etapa anterior viajan en el paquete: se
 # saltan solos cuando el archivo que verifican no existe (DEPLOY.md, scripts/ y
 # evidencia/ quedan fuera del ZIP). Excluirlos dejaría la suite incompleta.
+
+# El arnes de pruebas del frontend es tooling: no viaja en el paquete.
+frontend/test export-ignore
+frontend/test/** export-ignore

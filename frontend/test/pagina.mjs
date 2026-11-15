@@ -844,18 +844,56 @@ function vistaClientes(documento) {
 function formularioVenta(documento) {
   return crear(documento, 'form', { id: 'form-venta', clase: 'formulario' }, [
     crear(documento, 'h3', { clase: 'formulario__titulo', texto: 'Nueva venta' }),
-    crear(documento, 'div', { clase: 'campo' }, [
-      crear(documento, 'label', {
-        clase: 'campo__etiqueta',
-        for: 'venta-cliente',
-        texto: 'Cliente (obligatorio)'
-      }),
-      crear(documento, 'select', {
-        id: 'venta-cliente',
-        clase: 'campo__control',
-        name: 'cliente'
+    crear(documento, 'div', { clase: 'formulario__renglon' }, [
+      crear(documento, 'div', { clase: 'campo' }, [
+        crear(documento, 'label', {
+          clase: 'campo__etiqueta',
+          for: 'venta-cliente-id',
+          texto: 'Identificador del cliente (obligatorio)'
+        }),
+        crear(documento, 'input', {
+          id: 'venta-cliente-id',
+          clase: 'campo__control',
+          type: 'number',
+          name: 'cliente-id',
+          min: '1',
+          step: '1',
+          inputmode: 'numeric',
+          autocomplete: 'off',
+          'aria-describedby': 'venta-cliente-error'
+        }),
+        crear(documento, 'p', {
+          clase: 'campo__ayuda',
+          texto: 'Consultá el cliente para verificar su nombre antes de confirmar.'
+        })
+      ]),
+      crear(documento, 'button', {
+        id: 'venta-buscar-cliente',
+        clase: 'boton boton--secundario',
+        type: 'button',
+        texto: 'Verificar cliente'
       })
     ]),
+    crear(documento, 'p', {
+      id: 'venta-cliente-nombre',
+      clase: 'campo__ayuda',
+      role: 'status'
+    }),
+    crear(documento, 'p', { id: 'venta-cliente-error', clase: 'campo__error', hidden: true }),
+    crear(documento, 'p', {
+      id: 'venta-libros-error',
+      clase: 'mensaje mensaje--error',
+      role: 'alert',
+      texto: 'No se pudo cargar la lista de libros.',
+      hidden: true
+    }),
+    crear(documento, 'button', {
+      id: 'venta-reintentar',
+      clase: 'boton boton--secundario',
+      type: 'button',
+      texto: 'Reintentar carga de libros',
+      hidden: true
+    }),
     crear(documento, 'div', { clase: 'formulario__renglon' }, [
       crear(documento, 'div', { clase: 'campo' }, [
         crear(documento, 'label', {
@@ -966,6 +1004,13 @@ function resumenVenta(documento) {
         texto: 'Confirmar venta'
       }),
       crear(documento, 'p', {
+        id: 'venta-envio',
+        clase: 'mensaje mensaje--aviso',
+        role: 'status',
+        texto: 'Enviando la venta…',
+        hidden: true
+      }),
+      crear(documento, 'div', {
         id: 'venta-confirmada',
         clase: 'mensaje mensaje--exito',
         role: 'status',
@@ -1003,6 +1048,34 @@ function vistaHistorial(documento) {
         crear(documento, 'p', { clase: 'vista__sobretitulo', texto: 'Consultas' }),
         crear(documento, 'h2', { id: 'historial-titulo', texto: 'Historial' })
       ]),
+      crear(documento, 'p', {
+        id: 'historial-cargando',
+        clase: 'mensaje mensaje--aviso',
+        role: 'status',
+        texto: 'Cargando…',
+        hidden: true
+      }),
+      crear(documento, 'p', {
+        id: 'historial-error',
+        clase: 'mensaje mensaje--error',
+        role: 'alert',
+        texto: 'No se pudo cargar el historial.',
+        hidden: true
+      }),
+      crear(documento, 'button', {
+        id: 'historial-reintentar',
+        clase: 'boton boton--secundario',
+        type: 'button',
+        texto: 'Reintentar',
+        hidden: true
+      }),
+      crear(documento, 'p', {
+        id: 'historial-fin',
+        clase: 'mensaje mensaje--aviso',
+        role: 'status',
+        texto: 'No hay más resultados.',
+        hidden: true
+      }),
       crear(
         documento,
         'section',
@@ -1034,6 +1107,36 @@ function vistaHistorial(documento) {
         texto: 'No hay ventas registradas.',
         hidden: true
       }),
+      crear(
+        documento,
+        'nav',
+        {
+          id: 'historial-paginacion',
+          clase: 'paginacion',
+          'aria-label': 'Paginación del historial',
+          hidden: true
+        },
+        [
+          crear(documento, 'button', {
+            id: 'historial-anterior',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Anterior'
+          }),
+          crear(documento, 'p', {
+            id: 'historial-pagina',
+            clase: 'paginacion__pagina',
+            role: 'status',
+            texto: 'Página 1'
+          }),
+          crear(documento, 'button', {
+            id: 'historial-siguiente',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Siguiente'
+          })
+        ]
+      ),
       crear(
         documento,
         'section',
@@ -1081,7 +1184,21 @@ function vistaHistorial(documento) {
           ),
           crear(documento, 'p', { clase: 'detalle__total' }, [
             crear(documento, 'span', { id: 'detalle-total', texto: '$ 0,00' })
-          ])
+          ]),
+          crear(documento, 'p', {
+            id: 'detalle-error',
+            clase: 'mensaje mensaje--error',
+            role: 'alert',
+            texto: 'No se pudo cargar el detalle.',
+            hidden: true
+          }),
+          crear(documento, 'button', {
+            id: 'detalle-reintentar',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Reintentar detalle',
+            hidden: true
+          })
         ]
       )
     ]

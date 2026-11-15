@@ -5,23 +5,10 @@
 
   let refs = null;
   let renglones = [];
+  let libros = [];
+  let clienteVerificado = null;
+  let enviando = false;
   let iniciado = false;
-
-  function obtenerLibro(libroId) {
-    return Libreria.datos.libros.find(function (libro) {
-      return libro.id === libroId;
-    }) || null;
-  }
-
-  function obtenerCliente(clienteId) {
-    return Libreria.datos.clientes.find(function (cliente) {
-      return cliente.id === clienteId;
-    }) || null;
-  }
-
-  function calcularSubtotal(cantidad, precioUnitario) {
-    return Libreria.utils.redondearCentavos(cantidad * precioUnitario);
-  }
 
   function crearCelda(texto, esNumero) {
     const celda = document.createElement('td');
@@ -45,13 +32,19 @@
     refs.mensaje.hidden = true;
   }
 
-  function mostrarConfirmacion(texto) {
-    refs.confirmada.textContent = texto;
-    refs.confirmada.hidden = false;
+  function ocultarConfirmacion() {
+    refs.confirmada.replaceChildren();
+    refs.confirmada.hidden = true;
   }
 
-  function ocultarConfirmacion() {
-    refs.confirmada.hidden = true;
+  function buscarLibro(libroId) {
+    return libros.find(function (libro) {
+      return String(libro.id) === String(libroId);
+    }) || null;
+  }
+
+  function calcularSubtotal(cantidad, precioUnitario) {
+    return Libreria.utils.redondearCentavos(cantidad * precioUnitario);
   }
 
   function actualizarResumen() {
@@ -68,6 +61,7 @@
 
   function crearControlCantidad(renglon) {
     const control = document.createElement('input');
+
     control.type = 'number';
     control.min = '1';
     control.step = '1';
@@ -75,17 +69,18 @@
     control.className = 'campo__control tabla__cantidad';
     control.setAttribute('aria-label', 'Cantidad de ' + renglon.titulo);
     control.dataset.libroId = renglon.libroId;
+
     return control;
   }
 
   function crearBotonQuitar(renglon) {
     const boton = document.createElement('button');
+    const oculto = document.createElement('span');
+
     boton.type = 'button';
     boton.className = 'boton boton--peligro boton--chico';
     boton.dataset.libroId = renglon.libroId;
     boton.textContent = 'Quitar';
-
-    const oculto = document.createElement('span');
     oculto.className = 'visualmente-oculto';
     oculto.textContent = ' ' + renglon.titulo + ' de la venta';
     boton.append(oculto);
@@ -95,13 +90,12 @@
 
   function crearFilaRenglon(renglon) {
     const fila = document.createElement('tr');
-    const acciones = document.createElement('div');
-    const celdaAcciones = document.createElement('td');
     const celdaCantidad = document.createElement('td');
+    const celdaAcciones = document.createElement('td');
+    const acciones = document.createElement('div');
 
     celdaCantidad.className = 'tabla__numero';
     celdaCantidad.append(crearControlCantidad(renglon));
-
     acciones.className = 'tabla__acciones';
     acciones.append(crearBotonQuitar(renglon));
     celdaAcciones.append(acciones);
@@ -128,28 +122,92 @@
     refs.vacio.hidden = renglones.length > 0;
   }
 
-  function refrescar() {
-    const clientePrevio = refs.cliente.value;
-    const libroPrevio = refs.libro.value;
-    const clientes = Libreria.datos.clientes.map(function (cliente) {
-      return { valor: cliente.id, texto: cliente.nombre };
-    });
-    const libros = Libreria.datos.libros.map(function (libro) {
-      return { valor: libro.id, texto: libro.titulo };
-    });
+  function refrescarBorrador() {
+    renderizarRenglones();
+    actualizarResumen();
+  }
 
-    Libreria.utils.poblarSelect(
-      refs.cliente,
-      clientes,
-      'Seleccioná un cliente',
-      clientePrevio
-    );
-    Libreria.utils.poblarSelect(
-      refs.libro,
-      libros,
-      'Seleccioná un libro',
-      libroPrevio
-    );
+  function opcionesDeLibros() {
+    return libros.map(function (libro) {
+      return { valor: String(libro.id), texto: libro.titulo + ' · ' + libro.isbn };
+    });
+  }
+
+  function marcarLibros(disponibles) {
+    refs.librosError.hidden = disponibles;
+    refs.reintentar.hidden = disponibles;
+    refs.agregar.disabled = !disponibles;
+    refs.libro.disabled = !disponibles;
+  }
+
+  async function cargarLibros() {
+    refs.librosError.hidden = true;
+    refs.reintentar.hidden = true;
+
+    try {
+      const resultado = await Libreria.api.listarTodas('libros');
+      const valorPrevio = refs.libro.value;
+
+      libros = resultado.items;
+      Libreria.utils.poblarSelect(
+        refs.libro,
+        opcionesDeLibros(),
+        'Seleccioná un libro',
+        valorPrevio
+      );
+      marcarLibros(true);
+
+      if (resultado.truncado) {
+        mostrarMensaje(
+          'La lista de libros quedó incompleta porque supera el máximo de 2000 elementos.',
+          'aviso'
+        );
+      }
+    } catch (error) {
+      libros = [];
+      refs.libro.replaceChildren();
+      marcarLibros(false);
+      refs.librosError.textContent = error.mensaje;
+      refs.librosError.hidden = false;
+      refs.reintentar.hidden = false;
+    }
+  }
+
+  function invalidarCliente() {
+    clienteVerificado = null;
+    refs.clienteNombre.textContent = '';
+    refs.clienteError.hidden = true;
+  }
+
+  async function verificarClienteActual() {
+    const texto = refs.clienteId.value.trim();
+    const identificador = Number(texto);
+
+    invalidarCliente();
+
+    refs.clienteError.hidden = true;
+
+    if (!texto || !Number.isInteger(identificador) || identificador < 1) {
+      refs.clienteError.textContent = 'Ingresá un identificador de cliente válido.';
+      refs.clienteError.hidden = false;
+      refs.clienteId.focus();
+      return;
+    }
+
+    refs.buscarCliente.disabled = true;
+
+    try {
+      const cliente = await Libreria.api.obtenerCliente(identificador);
+
+      clienteVerificado = { id: cliente.id, nombre: cliente.nombre };
+      refs.clienteNombre.textContent = 'Cliente ' + cliente.id + ': ' + cliente.nombre;
+      refs.clienteError.hidden = true;
+    } catch (error) {
+      refs.clienteError.textContent = error.mensaje;
+      refs.clienteError.hidden = false;
+    } finally {
+      refs.buscarCliente.disabled = false;
+    }
   }
 
   function agregarRenglon(evento) {
@@ -172,31 +230,33 @@
       return;
     }
 
-    const libro = obtenerLibro(libroId);
+    const libro = buscarLibro(libroId);
 
     if (!libro) {
-      mostrarMensaje('El libro seleccionado no existe.');
+      mostrarMensaje('El libro seleccionado no está en la lista cargada.');
       refs.libro.focus();
       return;
     }
 
     const existente = renglones.find(function (renglon) {
-      return renglon.libroId === libroId;
+      return String(renglon.libroId) === String(libroId);
     });
 
     if (existente) {
       existente.cantidad += cantidad;
       existente.subtotal = calcularSubtotal(existente.cantidad, existente.precioUnitario);
-      renderizarRenglones();
-      actualizarResumen();
-      mostrarMensaje('El libro ya estaba en la venta; se actualizó la cantidad.', 'aviso');
+      refrescarBorrador();
+      mostrarMensaje(
+        'El libro ya estaba en la venta; se actualizó la cantidad del renglón.',
+        'aviso'
+      );
       refs.cantidad.value = '1';
       refs.libro.value = '';
       refs.libro.focus();
       return;
     }
 
-    const precioUnitario = Libreria.utils.redondearCentavos(libro.precio);
+    const precioUnitario = Libreria.utils.parsearImporte(libro.precio);
 
     renglones.push({
       libroId: libro.id,
@@ -207,8 +267,7 @@
       subtotal: calcularSubtotal(cantidad, precioUnitario)
     });
 
-    renderizarRenglones();
-    actualizarResumen();
+    refrescarBorrador();
     refs.cantidad.value = '1';
     refs.libro.value = '';
     refs.libro.focus();
@@ -216,7 +275,7 @@
 
   function cambiarCantidad(input) {
     const renglon = renglones.find(function (item) {
-      return item.libroId === input.dataset.libroId;
+      return String(item.libroId) === String(input.dataset.libroId);
     });
     const cantidad = Number(input.value);
 
@@ -248,7 +307,7 @@
 
   function quitarRenglon(libroId) {
     const indice = renglones.findIndex(function (renglon) {
-      return renglon.libroId === libroId;
+      return String(renglon.libroId) === String(libroId);
     });
 
     if (indice === -1) {
@@ -256,8 +315,7 @@
     }
 
     renglones.splice(indice, 1);
-    renderizarRenglones();
-    actualizarResumen();
+    refrescarBorrador();
     ocultarMensaje();
     ocultarConfirmacion();
   }
@@ -268,7 +326,7 @@
 
     controles.forEach(function (control) {
       const renglon = renglones.find(function (item) {
-        return item.libroId === control.dataset.libroId;
+        return String(item.libroId) === String(control.dataset.libroId);
       });
       const cantidad = Number(control.value);
 
@@ -289,33 +347,72 @@
     return valido;
   }
 
-  function generarIdVenta() {
-    let maximo = 0;
-
-    Libreria.datos.ventas.forEach(function (venta) {
-      const coincidencia = /^V-(\d+)$/.exec(String(venta && venta.id ? venta.id : ''));
-
-      if (coincidencia) {
-        const numero = Number.parseInt(coincidencia[1], 10);
-
-        if (numero > maximo) {
-          maximo = numero;
-        }
-      }
-    });
-
-    return 'V-' + String(maximo + 1).padStart(4, '0');
+  function cuerpoDeVenta() {
+    return {
+      cliente_id: clienteVerificado.id,
+      renglones: renglones.map(function (renglon) {
+        return { libro_id: Number(renglon.libroId), cantidad: renglon.cantidad };
+      })
+    };
   }
 
-  function confirmarVenta() {
+  function dibujarConfirmacion(venta) {
+    const titulo = document.createElement('p');
+    const meta = document.createElement('p');
+    const tiempo = document.createElement('time');
+    const lista = document.createElement('ul');
+    const total = document.createElement('p');
+
+    refs.confirmada.replaceChildren();
+    titulo.textContent = 'Listo: la venta ' + venta.id + ' se registró correctamente.';
+    tiempo.dateTime = venta.fecha;
+    tiempo.textContent = Libreria.utils.formatearFechaHora(venta.fecha);
+    meta.append(tiempo, document.createTextNode(' · ' + venta.cliente.nombre));
+    lista.className = 'autorias';
+
+    venta.renglones.forEach(function (renglon) {
+      const item = document.createElement('li');
+      const texto = document.createElement('span');
+
+      texto.textContent =
+        renglon.cantidad +
+        ' × ' +
+        renglon.titulo +
+        ' · ' +
+        Libreria.utils.formatearPrecio(renglon.precio_unitario) +
+        ' = ' +
+        Libreria.utils.formatearPrecio(renglon.subtotal);
+      item.textContent = texto.textContent;
+      lista.append(item);
+    });
+
+    total.textContent = 'Total: ' + Libreria.utils.formatearPrecio(venta.total);
+    refs.confirmada.append(titulo, meta, lista, total);
+    refs.confirmada.hidden = false;
+  }
+
+  function limpiarVenta() {
+    renglones = [];
+    invalidarCliente();
+    refs.clienteId.value = '';
+    refs.libro.value = '';
+    refs.cantidad.value = '1';
+    refrescarBorrador();
+  }
+
+  async function confirmarVenta() {
+    if (enviando) {
+      return;
+    }
+
     ocultarMensaje();
     ocultarConfirmacion();
 
-    const cliente = obtenerCliente(refs.cliente.value);
-
-    if (!cliente) {
-      mostrarMensaje('Seleccioná un cliente para confirmar la venta.');
-      refs.cliente.focus();
+    if (!clienteVerificado) {
+      mostrarMensaje(
+        'Verificá el cliente por identificador antes de confirmar la venta.'
+      );
+      refs.clienteId.focus();
       return;
     }
 
@@ -335,57 +432,35 @@
       return;
     }
 
-    const renglonesVenta = [];
-    let total = 0;
+    enviando = true;
+    refs.confirmar.disabled = true;
+    refs.envio.hidden = false;
 
-    for (let i = 0; i < renglones.length; i += 1) {
-      const renglon = renglones[i];
-      const libro = obtenerLibro(renglon.libroId);
+    try {
+      const venta = await Libreria.api.crearVenta(cuerpoDeVenta());
 
-      if (!libro) {
-        mostrarMensaje('El libro «' + renglon.titulo + '» ya no está disponible.');
-        return;
-      }
-
-      const precioUnitario = Libreria.utils.redondearCentavos(renglon.precioUnitario);
-      const subtotal = calcularSubtotal(renglon.cantidad, precioUnitario);
-
-      renglonesVenta.push({
-        libroId: libro.id,
-        titulo: libro.titulo,
-        isbn: libro.isbn,
-        cantidad: renglon.cantidad,
-        precioUnitario: precioUnitario,
-        subtotal: subtotal
-      });
-      total = Libreria.utils.redondearCentavos(total + subtotal);
+      limpiarVenta();
+      dibujarConfirmacion(venta);
+      await Libreria.historial.refrescar();
+    } catch (error) {
+      mostrarMensaje(error.mensaje);
+    } finally {
+      enviando = false;
+      refs.confirmar.disabled = false;
+      refs.envio.hidden = true;
     }
-
-    const venta = {
-      id: generarIdVenta(),
-      fecha: Libreria.utils.fechaLocalISO(),
-      clienteId: cliente.id,
-      clienteNombre: cliente.nombre,
-      renglones: renglonesVenta,
-      total: total
-    };
-
-    Libreria.datos.ventas.push(venta);
-    Libreria.store.guardarVentas();
-
-    renglones = [];
-    refs.cliente.value = '';
-    refs.libro.value = '';
-    refs.cantidad.value = '1';
-    renderizarRenglones();
-    actualizarResumen();
-    Libreria.historial.refrescar();
-    mostrarConfirmacion('Listo: la venta ' + venta.id + ' se registró correctamente.');
   }
 
   function configurarEventos() {
     refs.form.addEventListener('submit', agregarRenglon);
     refs.confirmar.addEventListener('click', confirmarVenta);
+    refs.buscarCliente.addEventListener('click', verificarClienteActual);
+    refs.reintentar.addEventListener('click', cargarLibros);
+    refs.clienteId.addEventListener('input', function () {
+      invalidarCliente();
+      ocultarMensaje();
+      ocultarConfirmacion();
+    });
 
     refs.cuerpo.addEventListener('change', function (evento) {
       const control = evento.target.closest('input[data-libro-id]');
@@ -403,29 +478,33 @@
       }
     });
 
-    refs.cliente.addEventListener('change', function () {
-      ocultarMensaje();
-      ocultarConfirmacion();
-    });
-
     refs.libro.addEventListener('change', function () {
       ocultarMensaje();
-      ocultarConfirmacion();
     });
   }
 
-  function iniciarVentas() {
+  async function iniciarVentas() {
     if (iniciado) {
       return;
     }
 
     iniciado = true;
+    renglones = [];
+    libros = [];
+    clienteVerificado = null;
     refs = {
       form: document.getElementById('form-venta'),
-      cliente: document.getElementById('venta-cliente'),
+      clienteId: document.getElementById('venta-cliente-id'),
+      buscarCliente: document.getElementById('venta-buscar-cliente'),
+      clienteNombre: document.getElementById('venta-cliente-nombre'),
+      clienteError: document.getElementById('venta-cliente-error'),
+      librosError: document.getElementById('venta-libros-error'),
+      reintentar: document.getElementById('venta-reintentar'),
       libro: document.getElementById('venta-libro'),
       cantidad: document.getElementById('venta-cantidad'),
+      agregar: document.getElementById('venta-agregar'),
       mensaje: document.getElementById('venta-mensaje'),
+      envio: document.getElementById('venta-envio'),
       cuerpo: document.querySelector('#tabla-renglones tbody'),
       vacio: document.getElementById('venta-vacio'),
       articulos: document.getElementById('venta-articulos'),
@@ -434,19 +513,16 @@
       confirmada: document.getElementById('venta-confirmada')
     };
 
-    Libreria.datos.ventas = Libreria.datos.ventas || [];
-    renglones = [];
-    refrescar();
-    renderizarRenglones();
-    actualizarResumen();
+    configurarEventos();
+    refrescarBorrador();
     ocultarMensaje();
     ocultarConfirmacion();
-    configurarEventos();
+    await cargarLibros();
   }
 
   Libreria.ventas = {
     iniciar: iniciarVentas,
-    refrescar: refrescar,
-    confirmar: confirmarVenta
+    confirmar: confirmarVenta,
+    refrescar: cargarLibros
   };
 })();

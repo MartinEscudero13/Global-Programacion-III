@@ -480,6 +480,13 @@ export class Elemento extends Nodo {
       return;
     }
 
+    const evento = new Evento('reset', { bubbles: true });
+    this.dispatchEvent(evento);
+
+    if (evento.defaultPrevented) {
+      return;
+    }
+
     descendientes(this).forEach(function (elemento) {
       if (
         elemento.localName === 'input' ||

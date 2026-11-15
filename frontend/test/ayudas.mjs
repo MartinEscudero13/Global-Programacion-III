@@ -68,13 +68,16 @@ export function llamadasA(llamadas, fragmento) {
   });
 }
 
-// Deja correr microtareas y temporizadores pendientes de los módulos.
+// Deja correr microtareas, temporizadores y promesas pendientes de los módulos.
 export async function asentar(veces) {
   const vueltas = veces === undefined ? 6 : veces;
 
   for (let i = 0; i < vueltas; i += 1) {
     await new Promise(function (resolver) {
       setImmediate(resolver);
+    });
+    await new Promise(function (resolver) {
+      setTimeout(resolver, 0);
     });
   }
 }
