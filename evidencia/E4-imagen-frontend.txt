@@ -106,6 +106,10 @@ COMANDO:  docker info --format '{{.ServerVersion}}'
 SALIDA REAL:
 29.5.3
 
+================================================================================
+E.2 - Build de la imagen del frontend
+================================================================================
+Directorio: C:\Users\tinch\Desktop\Global-Programacion-III\frontend
 COMANDO:  docker build -t libreria-frontend .
 SALIDA REAL:
 #0 building with "desktop-linux" instance using docker driver
