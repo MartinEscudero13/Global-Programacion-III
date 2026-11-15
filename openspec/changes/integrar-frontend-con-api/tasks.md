@@ -98,7 +98,7 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
   - RED: casos en `utils.test.mjs` para la función compartida; fallan.
   - GREEN: implementar y reemplazar el código del catálogo; `node --test frontend/test` pasa.
   - TRIANGULACIÓN: con página incompleta deshabilita «Siguiente» y con `offset=0` deshabilita «Anterior».
-- [ ] 3.9 Agregar `.paginacion` a `frontend/public/css/components.css` y verificar el catálogo en navegador.
+- [x] 3.9 Agregar `.paginacion` a `frontend/public/css/components.css` y verificar el catálogo en navegador.
   - Verificación: en Chrome con el contenedor del frontend y el backend detrás del proxy, el catálogo pagina, los botones quedan en una fila legible, `scrollWidth === clientWidth` a 320 px y a 1280 px y la consola no muestra errores propios.
 
 ## 4. Alta de libros
@@ -131,7 +131,7 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
   - RED: casos en `libros.test.mjs` con 20, 5 y 0 libros y con `fetch` que falla; fallan.
   - GREEN: implementar con la ayuda de paginación de 3.8; pasan.
   - TRIANGULACIÓN: un alta exitosa vuelve a la primera página y muestra el libro nuevo.
-- [ ] 4.8 Agregar `.autorias` a `components.css` y verificar el alta en navegador.
+- [x] 4.8 Agregar `.autorias` a `components.css` y verificar el alta en navegador.
   - Verificación: alta de un libro con stock, género opcional y dos autorías desde el navegador; 201 visible, tabla y catálogo actualizados, sin desplazamiento horizontal a 320 px ni a 1280 px.
 
 ## 5. Clientes
@@ -209,25 +209,25 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
 
 ## 8. Arranque, retiro de la persistencia local y documentación
 
-- [ ] 8.1 Reescribir el arranque en `app.js`: los `iniciar` son asíncronos, cada uno maneja su error y el router por hash arranca igual; verificar con `frontend/test/arranque.test.mjs` que una vista que falla no impide inicializar las demás.
+- [x] 8.1 Reescribir el arranque en `app.js`: los `iniciar` son asíncronos, cada uno maneja su error y el router por hash arranca igual; verificar con `frontend/test/arranque.test.mjs` que una vista que falla no impide inicializar las demás.
   - RED: caso con `fetch` que falla solo para editoriales y exige catálogo funcionando; falla.
   - GREEN: implementar el arranque tolerante; pasa.
   - TRIANGULACIÓN: la consola registrada en el contexto no contiene excepciones no capturadas.
-- [ ] 8.2 Eliminar `frontend/public/js/data.js` y `frontend/public/js/store.js`, quitar sus `script` del HTML y dejar ocho scripts en el orden `api`, `utils`, `catalog`, `books`, `clients`, `sales`, `history`, `app`.
+- [x] 8.2 Eliminar `frontend/public/js/data.js` y `frontend/public/js/store.js`, quitar sus `script` del HTML y dejar ocho scripts en el orden `api`, `utils`, `catalog`, `books`, `clients`, `sales`, `history`, `app`.
   - RED: `frontend/test/estatico.test.mjs` con la lista exacta de `src` y la ausencia de `data.js`/`store.js`; falla.
   - GREEN: borrar los dos archivos y actualizar los `script` del HTML; pasa.
   - TRIANGULACIÓN: afirmar que ningún módulo referencia `Libreria.store` ni `Libreria.datos`; pasa.
-- [ ] 8.3 Agregar la guarda estática global: sin `innerHTML`, `insertAdjacentHTML`, `document.write`, `localStorage`, `data.js`, `store.js` ni `Libreria.datos` en `frontend/public/js/`, y conjunto de ids del fixture igual al de `index.html`.
+- [x] 8.3 Agregar la guarda estática global: sin `innerHTML`, `insertAdjacentHTML`, `document.write`, `localStorage`, `data.js`, `store.js` ni `Libreria.datos` en `frontend/public/js/`, y conjunto de ids del fixture igual al de `index.html`.
   - RED: ejecutar `node --test frontend/test`; falla si queda alguna referencia.
   - GREEN: corregir las referencias restantes; pasa.
   - TRIANGULACIÓN: sembrar `localStorage` con las tres claves y recorrer catálogo, altas, venta e historial; las vistas siguen mostrando datos de la API.
-- [ ] 8.4 Reescribir `frontend/README.md`: estado del proyecto, ejecución con backend y proxy, funcionalidades, arquitectura de los ocho scripts, endpoints usados, ausencia de `localStorage`, comando `node --test frontend/test` y comprobaciones realizadas con fecha real.
+- [x] 8.4 Reescribir `frontend/README.md`: estado del proyecto, ejecución con backend y proxy, funcionalidades, arquitectura de los ocho scripts, endpoints usados, ausencia de `localStorage`, comando `node --test frontend/test` y comprobaciones realizadas con fecha real.
   - Verificación: `Select-String -Path frontend/README.md -Pattern 'Almacenamiento local|persistencia en|nueve scripts|libreria\.v1\.'` no devuelve líneas, `Select-String -Path frontend/README.md -Pattern 'node --test'` encuentra el comando y `Select-String -Path frontend/README.md -Pattern 'no usa localStorage'` encuentra la aclaración de la fuente de verdad.
-- [ ] 8.5 Marcar `frontend/test` con `export-ignore` en `.gitattributes` y comprobar el paquete.
+- [x] 8.5 Marcar `frontend/test` con `export-ignore` en `.gitattributes` y comprobar el paquete.
   - Verificación: `git check-attr export-ignore -- frontend/test` responde `set`; `git archive --format=tar HEAD | tar -tf - | Select-String 'frontend/test'` no devuelve líneas y sí aparecen `frontend/public/js/api.js` y `frontend/public/index.html`.
-- [ ] 8.6 Ejecutar la verificación integral en navegador y sintaxis.
+- [x] 8.6 Ejecutar la verificación integral en navegador y sintaxis.
   - Verificación: `node --check` sobre cada archivo de `frontend/public/js/` sale con código 0; en el navegador con el contenedor y el backend detrás del proxy se recorren catálogo con búsqueda y paginación, alta de libro, alta de cliente, venta de dos renglones con detalle tras recargar, rechazo 409 y 422 conservando el borrador, y precio histórico con `PATCH /libros/{id}`; consola sin errores propios y `document.documentElement.scrollWidth === clientWidth` a 320 px y 1280 px.
-- [ ] 8.7 Validar los artefactos del change: `openspec validate --strict "integrar-frontend-con-api"` responde que el change es válido.
+- [x] 8.7 Validar los artefactos del change: `openspec validate --strict "integrar-frontend-con-api"` responde que el change es válido.
 
 ## Workflow follow-up
 

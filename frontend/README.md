@@ -174,6 +174,7 @@ Comprobaciones ejecutadas el **15/11/2026** contra la API real (`python -m app.s
 | Detalle de libro | «Rayuela» con ISBN, Sudamericana, Novela, `$ 25.000,00`, stock 10 y la autoría «Julio Cortázar · autor · orden 1». El cierre ocultó el detalle. |
 | Alta de libro | «Crónica del sur» con stock 3, sin género y una autoría se registró con el identificador 39; el formulario quedó limpio; la tabla se ubicó en la página 2 con el libro visible y el catálogo lo mostró como «Sin clasificar» con `$ 1.234,50`. |
 | 409 de ISBN | Repetir el ISBN mostró «El ISBN ya está registrado», conservó los campos y no informó un alta exitosa. |
+| Autorías múltiples | Un alta con stock 0 y dos autorías envió `[{"autor_id":1,"rol":"autor","orden":1},{"autor_id":2,"rol":"coautor","orden":2}]`, se registró con el identificador 41 y la vista mostró las dos autorías con su orden. |
 | Alta de cliente | «Prueba Navegador» se registró con el identificador 13; repetir el email mostró «El email ya está registrado» conservando el valor. |
 | Consulta de cliente | El identificador 2 mostró «Tomás Ríos · tomas@example.com» y sumó una segunda fila a la lista de la sesión. |
 | Venta | Cliente 2 verificado por nombre, dos renglones (2 × Rayuela y 1 × Respiración artificial), estimación `$ 77.000,00` y confirmación de la venta 14 con precio unitario, subtotales y total del servidor. El borrador quedó vacío. |
