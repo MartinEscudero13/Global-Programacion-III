@@ -1,0 +1,29 @@
+# Empaquetado de la entrega: git archive respeta export-ignore.
+# En .gitattributes un patrón de directorio no recursa: se usa `dir/**`.
+.gitattributes export-ignore
+AGENTS.md export-ignore
+CHANGES.md export-ignore
+.active-orchestrator-state.json export-ignore
+.atl/** export-ignore
+.opencode/** export-ignore
+design-system/** export-ignore
+docs/** export-ignore
+knowledge-base/** export-ignore
+openspec/** export-ignore
+
+backend/AGENTS.md export-ignore
+backend/CHANGES.md export-ignore
+backend/CLAUDE.md export-ignore
+backend/DEPLOY.md export-ignore
+backend/.active-orchestrator-state.json export-ignore
+backend/.atl/** export-ignore
+backend/.opencode/** export-ignore
+backend/design-system/** export-ignore
+backend/docs/** export-ignore
+backend/evidencia/** export-ignore
+backend/knowledge-base/** export-ignore
+backend/openspec/** export-ignore
+backend/scripts/** export-ignore
+backend/test/test_artefactos_despliegue.py export-ignore
+backend/test/test_artefactos_http.py export-ignore
+backend/test/test_artefactos_imagen.py export-ignore
