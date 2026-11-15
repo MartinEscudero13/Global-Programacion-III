@@ -239,7 +239,16 @@ def test_variables_declaradas_se_usan_y_estan_definidas() -> None:
 
 # --- Integridad de la evidencia -------------------------------------------
 
+MOTIVO_ETAPA_ANTERIOR = (
+    "artefacto de la etapa anterior del parcial: backend/evidencia/ no viaja "
+    "en el paquete de entrega del Global"
+)
+requiere_evidencia = pytest.mark.skipif(
+    not EVIDENCIA.is_dir(), reason=MOTIVO_ETAPA_ANTERIOR
+)
 
+
+@requiere_evidencia
 def test_evidencia_tiene_los_nueve_archivos() -> None:
     for nombre in ARCHIVOS_EVIDENCIA:
         ruta = EVIDENCIA / nombre
@@ -247,6 +256,7 @@ def test_evidencia_tiene_los_nueve_archivos() -> None:
         assert ruta.stat().st_size > 0, f"evidencia/{nombre} está vacío"
 
 
+@requiere_evidencia
 def test_evidencia_c07_documenta_select_y_conteo() -> None:
     for nombre in ("C-07-consultas-libro.txt", "C-07-consultas-venta.txt"):
         texto = (EVIDENCIA / nombre).read_text(encoding="utf-8")
@@ -257,6 +267,7 @@ def test_evidencia_c07_documenta_select_y_conteo() -> None:
         assert "SQL_ECHO: true" in texto
 
 
+@requiere_evidencia
 def test_evidencia_d_declara_comando_y_criterio() -> None:
     for nombre in ARCHIVOS_EVIDENCIA:
         if not nombre.startswith("D-"):
@@ -273,6 +284,7 @@ def test_evidencia_d_declara_comando_y_criterio() -> None:
         ), f"evidencia/{nombre} no declara criterio o verificación"
 
 
+@requiere_evidencia
 def test_evidencia_sin_marcadores_de_plantilla() -> None:
     marcadores = ("<TBD>", "<completar>", "REEMPLAZAR", "{{", "PENDIENTE")
     for nombre in ARCHIVOS_EVIDENCIA:

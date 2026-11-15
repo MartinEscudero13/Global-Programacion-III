@@ -13,7 +13,9 @@ from pathlib import Path
 import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel import SQLModel
 
 from app.modules.editoriales.models import Editorial
 from app.modules.libros.models import Libro
@@ -178,6 +180,34 @@ async def test_venta_sembrada_se_lee_con_total_y_renglones(cliente_bd, url_bd_te
     assert renglones["Respiración artificial"]["subtotal"] == "27000.00"
 
 
+@pytest.mark.integration
+async def test_seed_sin_esquema_no_crea_tablas(url_bd_test):
+    """Triangulación de C.6: el seed no es una segunda fuente del esquema.
+
+    Sobre una base sin migrar, ``sembrar`` falla por falta de tablas y deja la
+    base como estaba: la creación del esquema es responsabilidad de Alembic.
+    """
+    motor_verificacion = create_async_engine(url_bd_test)
+    try:
+        async with motor_verificacion.begin() as conexion:
+            await conexion.run_sync(SQLModel.metadata.drop_all)
+
+        with pytest.raises(SQLAlchemyError) as excinfo:
+            await sembrar(url_bd_test)
+        assert "create_all" not in str(excinfo.value)
+
+        async with motor_verificacion.connect() as conexion:
+            resultado = await conexion.execute(
+                text(
+                    "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' "
+                    "AND tablename <> 'alembic_version'"
+                )
+            )
+            assert resultado.scalar_one() == 0
+    finally:
+        await motor_verificacion.dispose()
+
+
 def test_main_sin_database_url_devuelve_2_sin_credenciales(monkeypatch, capsys):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
@@ -192,7 +222,7 @@ def test_main_sin_database_url_devuelve_2_sin_credenciales(monkeypatch, capsys):
 
 
 @pytest.mark.integration
-async def test_sembrar_no_imprime_la_url_ni_la_contrasena(url_bd_test, capsys):
+async def test_sembrar_no_imprime_la_url_ni_la_contrasena(motor_bd, url_bd_test, capsys):
     conteos = await sembrar(url_bd_test)
 
     salida = capsys.readouterr()

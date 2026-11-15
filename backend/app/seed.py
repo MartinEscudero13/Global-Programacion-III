@@ -1,9 +1,13 @@
-"""Datos iniciales idempotentes para una base de PostgreSQL vacía (C-05).
+"""Datos iniciales idempotentes para una base de PostgreSQL ya migrada (C-05).
 
 Se ejecuta con ``python -m app.seed`` en local y dentro del contenedor
 (``docker exec libreria python -m app.seed``). Sembrar es seguro de repetir:
 usa ids deterministas y ``ON CONFLICT DO NOTHING``, y nunca borra ni pisa filas
 existentes (DD-10, SU-06).
+
+Este módulo sólo escribe datos: el esquema lo aplica ``alembic upgrade head``
+antes de correr el seed. Si las tablas no existen, la ejecución falla con un
+error de base de datos y no las crea por su cuenta.
 
 El módulo no imprime la cadena de conexión ni credenciales: ``sembrar`` devuelve
 los conteos y solo ``main`` los escribe, junto con errores genéricos en
@@ -19,13 +23,12 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import SQLModel
 
 from app.core.config import ConfigurationError, Settings, get_settings
 from app.core.database import build_engine, build_session_factory
 
-# Los seis imports deben ejecutarse antes de `create_all` para que
-# `SQLModel.metadata` contenga las nueve tablas, igual que en `app/main.py`.
+# Los seis imports completan el registro de clases que SQLAlchemy necesita para
+# resolver las relaciones declaradas por cadena; el esquema no se crea acá.
 from app.modules.autores.models import Autor
 from app.modules.clientes.models import Cliente
 from app.modules.editoriales.models import Editorial
@@ -191,23 +194,21 @@ async def _contar(sesion: AsyncSession) -> dict[str, int]:
 
 
 async def sembrar(url: str | None = None) -> dict[str, int]:
-    """Crea el esquema, carga el conjunto inicial y devuelve los conteos.
+    """Carga el conjunto inicial sobre una base ya migrada y devuelve los conteos.
 
     Con ``url`` explícita apunta a esa base (los tests usan ``url_bd_test``);
-    sin ``url`` usa ``DATABASE_URL`` a través de ``get_settings``. El seed nunca
-    hereda ``SQL_ECHO``: su motor se crea siempre con ``sql_echo=False`` para
-    que la salida solo tenga conteos (design §6). Todas las inserciones y el
-    reposicionamiento de secuencias ocurren en una transacción y el motor se
-    libera siempre en el ``finally``.
+    sin ``url`` usa ``DATABASE_URL`` a través de ``get_settings``. No crea el
+    esquema: si las tablas no existen el error de base de datos se propaga. El
+    seed nunca hereda ``SQL_ECHO``: su motor se crea siempre con
+    ``sql_echo=False`` para que la salida solo tenga conteos (design §6). Todas
+    las inserciones y el reposicionamiento de secuencias ocurren en una
+    transacción y el motor se libera siempre en el ``finally``.
     """
     if url is None:
         url = get_settings().database_url
     engine = build_engine(Settings(database_url=url, sql_echo=False))
     factory = build_session_factory(engine)
     try:
-        async with engine.begin() as conexion:
-            await conexion.run_sync(SQLModel.metadata.create_all)
-
         async with factory() as sesion:
             await _insertar(sesion, Editorial.__table__, EDITORIALES, ["id"])
             await _insertar(sesion, Genero.__table__, GENEROS, ["id"])
