@@ -9,7 +9,7 @@ Trabajo Práctico Integrador de **Programación III**, Tecnicatura Universitaria
 
 ## Estado del proyecto
 
-**Etapa 1 completada y Ejercicios 3, 4, 5 y 6 implementados.** La aplicación funciona abriendo `index.html` con doble clic: catálogo dinámico con filtro, altas de libros y clientes, ventas con renglones editables, historial inmutable y persistencia en `localStorage`.
+**Etapa 1 completada y Ejercicios 3, 4, 5 y 6 implementados.** La aplicación funciona abriendo `public/index.html` con doble clic: catálogo dinámico con filtro, altas de libros y clientes, ventas con renglones editables, historial inmutable y persistencia en `localStorage`.
 
 La verificación manual de los ocho casos del PDF se registra más abajo. No quedan funcionalidades ni etapas pendientes. El trabajo está integrado en `master`.
 
@@ -18,7 +18,7 @@ La verificación manual de los ocho casos del PDF se registra más abajo. No que
 No requiere instalación, npm ni servidor.
 
 1. Descargar o clonar la carpeta del proyecto.
-2. Abrir `index.html` con doble clic en el navegador.
+2. Abrir `public/index.html` con doble clic en el navegador.
 
 El proyecto usa HTML, CSS y JavaScript nativos, sin librerías, frameworks ni CDNs.
 
@@ -28,7 +28,7 @@ Si ya tenés el repositorio clonado:
 
 1. `git switch master`
 2. `git pull`
-3. Abrir `index.html` con doble clic.
+3. Abrir `public/index.html` con doble clic.
 
 No hace falta instalar dependencias ni iniciar un servidor. Los cambios de cada etapa se integran en `master`.
 
@@ -42,7 +42,7 @@ No hace falta instalar dependencias ni iniciar un servidor. Los cambios de cada 
 | Ventas | `#ventas` |
 | Historial | `#historial` |
 
-Las cinco vistas conviven en `index.html` y se navegan con anclas. El router por hash actualiza `aria-current="location"` y mueve el foco al título de la vista. El enlace «Saltar al contenido» lleva el foco a `main`.
+Las cinco vistas conviven en `public/index.html` y se navegan con anclas. El router por hash actualiza `aria-current="location"` y mueve el foco al título de la vista. El enlace «Saltar al contenido» lleva el foco a `main`.
 
 ## Funcionalidades
 
@@ -111,7 +111,7 @@ En la tabla de datos de este README los precios se muestran como valores numéri
 - `js/history.js`: historial y detalle inmutable de ventas.
 - `js/app.js`: carga del storage, arranque de módulos y router por hash.
 
-Los scripts son clásicos (sin módulos ES) y se cargan al final de `index.html` en ese orden. Todo dato se inserta con `textContent`. Las tablas y los selectores se regeneran con `refrescar()`.
+Los scripts son clásicos (sin módulos ES) y se cargan al final de `public/index.html` en ese orden. Todo dato se inserta con `textContent`. Las tablas y los selectores se regeneran con `refrescar()`.
 
 ## Almacenamiento local
 
@@ -184,7 +184,7 @@ El detalle debe conservar el precio unitario, los subtotales y el total confirma
 
 ## Comprobaciones realizadas
 
-Estas comprobaciones se ejecutaron el 21/10/2026 abriendo `index.html` desde el sistema de archivos: las de comportamiento se recorrieron en Chrome 155 con un perfil temporal limpio y las de sintaxis y empaquetado con Node 20 y Git.
+Estas comprobaciones se ejecutaron el 21/10/2026 abriendo `public/index.html` desde el sistema de archivos: las de comportamiento se recorrieron en Chrome 155 con un perfil temporal limpio y las de sintaxis y empaquetado con Node 20 y Git.
 
 | Comprobación | Resultado observado |
 | --- | --- |
@@ -198,7 +198,7 @@ Estas comprobaciones se ejecutaron el 21/10/2026 abriendo `index.html` desde el 
 | Auditoría del HTML | 75 IDs únicos, 0 duplicados y 0 referencias `aria-*`/`label[for]` rotas; 5 tablas con `caption` y 22 `th`; 4 formularios, 1 fieldset y 0 opciones preseleccionadas; 0 estilos inline y 0 recursos externos. |
 | Accesibilidad generada | Los checkboxes de autores tienen `label`, `aria-describedby` válido y foco visible; los errores usan `aria-invalid` y texto asociado. |
 | Confirmación con precio capturado | Se agregó un renglón de `$ 1.500,00`, se cambió el precio del catálogo a `9999` antes de confirmar y la venta persistió `precioUnitario 1500`, subtotal `3000` y total `3000`. Se repitió con precio decreciente (2000 → 500) y con cambio de cantidad posterior (3 × 1500 = 4500). |
-| Paquete de entrega | `git archive --format=zip` produce un paquete con `index.html`, `css/`, `js/` y `README.md`; `openspec/`, `knowledge-base/`, `docs/`, `.atl/`, `AGENTS.md`, `CHANGES.md` y `.active-orchestrator-state.json` quedan excluidos por `export-ignore`. |
+| Paquete de entrega | `git archive --format=zip` produce un paquete con `public/index.html`, `public/css/`, `public/js/` y `README.md`, además del `Dockerfile`, el `.dockerignore` y la plantilla `default.conf.template` de `frontend/`; `openspec/`, `knowledge-base/`, `docs/`, `.atl/`, `AGENTS.md`, `CHANGES.md` y `.active-orchestrator-state.json` quedan excluidos por `export-ignore`. |
 | Resumen de venta | El resumen muestra sólo «Artículos» y «Total»; 3 artículos dan `$ 5.000,00` y al pasar una cantidad a 3 el total sube a `$ 6.500,00`. La columna «Subtotal» se conserva en cada renglón. |
 | Teclado y foco | El primer `Tab` enfoca «Saltar al contenido» con contorno sólido de 3 px; el segundo llega al enlace «Catálogo». |
 
