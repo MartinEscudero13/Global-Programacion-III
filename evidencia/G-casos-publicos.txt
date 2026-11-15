@@ -1,0 +1,152 @@
+CASOS G-01 A G-06 · EJECUTADOS DESDE LA URL PÚBLICA
+Global de Programación III · Grupo ZorionTech
+Sitio: https://libreria.zoriontech.me
+Fecha de ejecución: 15/11/2026
+Navegador: Google Chrome 157 (headless) con Playwright sobre la URL pública
+API: https://libreria.zoriontech.me/api (misma origen, proxy Nginx → libreria-backend)
+
+Método: cada caso se ejecutó dos veces, por la interfaz y contra la API pública.
+La salida de abajo es la observada, sin editar.
+
+================================================================================
+G-01 · CATÁLOGO
+================================================================================
+Pasos: abrir el sitio, avanzar con «Siguiente», volver con «Anterior», buscar
+«rayuela», buscar un texto sin coincidencias y abrir el detalle de un libro.
+
+Resultado observado (interfaz):
+  Página 1: 20 tarjetas, «Página 1»
+  Página 2: 3 tarjetas, «Página 2», botón «Siguiente» deshabilitado
+  Vuelta con «Anterior»: «Página 1»
+  Búsqueda «rayuela»: 1 tarjeta, título «Rayuela»
+  Búsqueda sin coincidencias: visible el bloque de sin resultados
+  Detalle: «Rayuela», autores «Julio Cortázar · autor · orden 1»
+  Datos del detalle: ISBN 978-950-00-0001-1, Editorial Sudamericana,
+  Género Novela, Precio $ 25.000,00, Stock 10
+
+Resultado observado (API):
+  GET /api/libros/?titulo=ray&limit=20&offset=0 → 200, 1 elemento (Rayuela)
+  GET /api/libros/?limit=2&offset=0 → 200, ids [1, 2]
+  GET /api/libros/?limit=2&offset=2 → 200, ids [3, 4]
+  GET /api/libros/?titulo=zzzz-no-existe → 200, 0 elementos
+  GET /api/libros/1 → 200, Rayuela, precio 25000.00, stock 10
+
+El total de libros supera la página de 20 porque se cargaron datos ficticios
+para poder ejercitar limit y offset. Un libro sin género se muestra como
+«Sin clasificar» en el catálogo y en el detalle.
+
+================================================================================
+G-02 · ALTA DE LIBRO
+================================================================================
+Pasos: alta con título, ISBN, precio 1234.50, stock 9, editorial, género y una
+autoría (ID 1 verificado con «Buscar»); luego repetir el mismo ISBN.
+
+Resultado observado (interfaz):
+  Autor verificado: «Autor 1: Julio Cortázar»
+  Autorías agregadas al formulario: 1
+  Mensaje de éxito: «Listo: se registró «Verificacion G-02 6339135» con el
+  identificador 25.»
+  La tabla se posicionó en la página que contiene el libro creado.
+  Repetir el ISBN: «El ISBN ya está registrado»
+
+Resultado observado (API):
+  POST /api/libros/ → 201, id 5, autores
+    [Julio Cortázar · autor · 1, Ricardo Piglia · coautor · 2]
+  GET /api/libros/5 → 200, las dos autorías con rol y orden
+  POST /api/libros/ con el mismo ISBN → 409 «El ISBN ya está registrado»
+
+El alta usa el registro devuelto por la API para refrescar catálogo, tabla y
+selector de venta.
+
+================================================================================
+G-03 · ALTA DE CLIENTE
+================================================================================
+Pasos: alta de cliente, consulta por ID con el buscador y repetición del email.
+
+Resultado observado (interfaz):
+  Éxito: «Listo: se registró «Cliente G-03 6339135» con el identificador 5.»
+  Consulta del ID 1: «Ana Gómez · ana@example.com»
+  Repetir el email: «El email ya está registrado»
+
+Resultado observado (API):
+  POST /api/clientes/ → 201, id 3
+  GET /api/clientes/3 → 200, mismo nombre y email
+  POST /api/clientes/ con el mismo email → 409 «El email ya está registrado»
+
+Como el backend no expone listado de clientes, la venta selecciona por ID: se
+escribe el identificador, se consulta GET /api/clientes/{id} y recién entonces
+se muestra el nombre y se habilita la venta. Es la alternativa que la consigna
+habilita explícitamente y queda documentada en el README.
+
+================================================================================
+G-04 · VENTA
+================================================================================
+Pasos: cliente 2 verificado por ID, dos renglones (2 × libro 1 y 1 × libro 4),
+confirmar, recargar la página y abrir el detalle desde el historial.
+
+Resultado observado (interfaz):
+  Cliente: «Cliente 2: Tomás Ríos»
+  Renglones en el borrador: 2
+  Total estimado antes de confirmar: $ 77.000,00
+  Confirmación: «Listo: la venta 4 se registró correctamente.
+    15/11/2026 20:46 · Tomás Ríos
+    2 × Rayuela · $ 25.000,00 = $ 50.000,00
+    1 × Respiración artificial · $ 27.000,00 = $ 27.000,00
+    Total: $ 77.000,00»
+  El borrador quedó vacío después de confirmar (0 renglones).
+  Después de recargar: historial con 3 filas; el detalle abre con 2 renglones
+  y total $ 77.000,00.
+
+Resultado observado (API):
+  POST /api/ventas/ → 201, id 3, fecha 2026-11-15T23:18:17.909611Z,
+  total 77000.00, renglones con precio_unitario y subtotal del servidor.
+  GET /api/ventas/3 → 200, los mismos importes que devolvió el alta.
+
+Los importes que se muestran después de confirmar son los de la respuesta de la
+API, no los calculados en el navegador.
+
+================================================================================
+G-05 · PRECIO HISTÓRICO
+================================================================================
+Pasos: PATCH del precio del libro 4 y nueva consulta de la venta anterior.
+
+Resultado observado:
+  Precio original del libro 4: 27000.00
+  PATCH /api/libros/4 {"precio": "99000.00"} → 200
+  Detalle de la venta después del cambio: $ 77.000,00 (sin cambios)
+  Renglones de la venta: Respiración artificial 27000.00 · 27000.00
+  Restauración del precio → 200
+
+La venta guarda copia de los importes: cambiar el precio del catálogo no altera
+las ventas ya registradas.
+
+================================================================================
+G-06 · RECHAZO
+================================================================================
+Pasos: intentar una venta con una referencia inexistente y con renglones
+repetidos, y comparar el historial antes y después.
+
+Resultado observado (API):
+  POST /api/ventas/ con libro_id 999999 → 409 «El libro indicado no existe»
+  POST /api/ventas/ con el libro 1 dos veces → 422, detalle
+    «Value error, El libro no puede repetirse en la venta»
+  Ventas antes: 2 · ventas después: 2 (el historial no cambió)
+
+Resultado observado (interfaz):
+  Consulta de un cliente inexistente (999999) → «No encontrado» y la venta no
+  se habilita.
+  Al intentar agregar dos veces el mismo libro al borrador, la interfaz lo
+  impide antes de enviar: «El libro ya estaba en la venta; se actualizó la
+  cantidad del renglón.» El borrador conserva el renglón.
+  Ventas antes: 3 · ventas después: 3 (el historial no cambió).
+
+La validación de renglón único existe en las dos capas: el formulario no duplica
+el libro y, si se enviara igual, la API responde 422. Los 409 y 422 se
+provocaron también de forma directa contra la API pública para dejar la
+evidencia del servidor.
+
+Los mensajes «Failed to load resource: 409/404» que Chrome registra en consola
+corresponden a esas respuestas provocadas a propósito; no son errores de la
+aplicación.
+
+ESTADO: VERIFICADO (15/11/2026)

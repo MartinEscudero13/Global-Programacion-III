@@ -1,0 +1,93 @@
+G-07 · DESPLIEGUE
+Global de Programación III · Grupo ZorionTech
+Fecha de ejecución: 15/11/2026
+Panel: Easypanel sobre la VPS de la cátedra (Docker Swarm + Traefik 3.6.7)
+
+================================================================================
+1. Servicios
+================================================================================
+El panel no permite crear un proyecto nuevo (responde «You are not allowed to
+create more projects» y canCreateProject devuelve false con los tres proyectos
+existentes), así que los servicios del Global viven dentro del proyecto del
+grupo, con el prefijo libreria- para no mezclarse con los de otras materias.
+
+  zoriontech-crm_libreria-db        postgres:18-alpine        1/1
+  zoriontech-crm_libreria-backend   app, Build Path /backend  1/1
+  zoriontech-crm_libreria-frontend  app, Build Path /frontend 1/1
+
+Nombre interno del backend: zoriontech-crm_libreria-backend:8000.
+El backend no tiene dominio público: sólo se alcanza por la red interna.
+
+================================================================================
+2. HTTPS y proxy
+================================================================================
+Dominio del frontend: libreria.zoriontech.me (DNS wildcard de zoriontech.me al
+VPS). Certificado emitido por Let's Encrypt:
+
+  subject = CN = libreria.zoriontech.me
+  issuer  = C = US, O = Let's Encrypt, CN = YR1
+  notBefore = Nov 15 22:04:58 2026 GMT
+  notAfter  = Feb 13 22:04:57 2027 GMT
+
+Comprobaciones con curl desde fuera de la VPS:
+
+  https://libreria.zoriontech.me/                  → 200 text/html   24.793 bytes
+  https://libreria.zoriontech.me/api/health/ready   → 200 {"estado":"listo","base":"ok"}
+  https://libreria.zoriontech.me/api/libros/        → 200, libros del seed
+  https://libreria.zoriontech.me/js/api.js          → 200
+  https://libreria.zoriontech.me/js/store.js        → 404 (ya no existe en esta versión)
+  https://libreria.zoriontech.me/js/data.js         → 404 (ya no existe en esta versión)
+
+================================================================================
+3. Migraciones al arrancar
+================================================================================
+El contenedor del backend aplica el esquema antes de levantar Uvicorn. Logs del
+primer arranque:
+
+  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+  INFO  [alembic.runtime.migration] Will assume transactional DDL.
+  INFO  [alembic.runtime.migration] Running upgrade  -> 0001_esquema_inicial,
+        Esquema inicial: las nueve tablas del dominio (0001).
+  INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+Carga inicial de datos ficticios, ejecutada desde el panel:
+
+  python -m app.seed
+  → editorial=1 genero=1 autor=4 libro=4 libro_autor=5 cliente=2 perfil_cliente=0 venta=1 renglon_venta=2
+
+================================================================================
+4. Redespliegue con datos intactos
+================================================================================
+Se redesplegó el backend con deployAppService y se comparó el contenido antes y
+después:
+
+  antes:   libros 5 (ids 1-5)   ventas 2 (ids 2,3)
+  deploy:  HTTP 200
+  después: libros 5 (ids 1-5)   ventas 2 (ids 2,3)
+  health:  200 {"estado":"listo","base":"ok"}
+  logs:    alembic sin upgrade pendiente; uvicorn escuchando en 0.0.0.0:8000
+
+Los datos viven en el volumen del servicio Postgres, no en el contenedor de la
+API.
+
+================================================================================
+5. Construcción de la imagen del frontend
+================================================================================
+Local, con Docker Desktop:
+
+  cd frontend
+  docker build -t libreria-frontend .
+  docker run -d --name libreria-frontend -p 127.0.0.1:8080:80 \
+    -e API_UPSTREAM=host.docker.internal:8000 libreria-frontend
+
+  BUILD_EXIT=0 · libreria-frontend:latest 92.9 MB · nginx/1.30.6
+  /api/health/ready → 200 · / → 200 · /no-existe.html → 404
+  docker logs sin errores ni warnings
+
+En Docker Desktop no se pasa --add-host: con ese flag, host.docker.internal
+resuelve primero a IPv6 y Nginx registra un error transitorio de conexión.
+
+En Easypanel el mismo Dockerfile se construye con Build Path /frontend y el
+argumento de entorno API_UPSTREAM=zoriontech-crm_libreria-backend:8000.
+
+ESTADO: VERIFICADO (15/11/2026)
