@@ -21,12 +21,17 @@ Los archivos que Nginx sirve SHALL vivir bajo `frontend/public/`: `index.html`, 
 
 ### Requirement: Rutas relativas conservadas
 
-El documento SHALL seguir cargando sus hojas de estilo y sus scripts con rutas relativas que resuelvan dentro de `public/`, en el mismo orden de carga que antes del movimiento. Ninguna referencia del HTML MUST apuntar a un archivo fuera de `public/`.
+El documento SHALL cargar sus tres hojas de estilo y sus ocho scripts con rutas relativas que resuelvan dentro de `public/`, con la capa de API cargada antes que los módulos de vista. Ninguna referencia del HTML MUST apuntar a un archivo fuera de `public/`.
 
 #### Scenario: Recursos del documento
 
 - **WHEN** se abre `http://127.0.0.1:8080/` en el navegador
-- **THEN** las tres hojas de `css/` y los nueve scripts de `js/` responden 200 y la consola no muestra errores de carga
+- **THEN** las tres hojas de `css/` y los ocho scripts de `js/` responden 200 y la consola no muestra errores de carga
+
+#### Scenario: Orden de los scripts
+
+- **WHEN** se revisan los atributos `src` de los `script` de `public/index.html`
+- **THEN** aparecen `js/api.js`, `js/utils.js`, `js/catalog.js`, `js/books.js`, `js/clients.js`, `js/sales.js`, `js/history.js` y `js/app.js` en ese orden, sin `js/data.js` ni `js/store.js`
 
 #### Scenario: Referencias fuera de la carpeta pública
 
@@ -98,25 +103,6 @@ El servidor SHALL servir `index.html` como documento por defecto y SHALL respond
 
 - **WHEN** se revisan las peticiones del navegador al abrir la web
 - **THEN** todas se dirigen al mismo origen y no hay pedidos a CDNs ni a otros dominios
-
-### Requirement: Funcionamiento sin la API en esta etapa
-
-La aplicación servida SHALL seguir funcionando como en el primer parcial: catálogo, altas, venta simulada e historial desde `localStorage`, sin `fetch`, sin `async` y sin llamadas a `/api`. La integración con la API queda fuera de este change.
-
-#### Scenario: Catálogo con el backend detenido
-
-- **WHEN** se abre la web con el contenedor del frontend y sin backend en ejecución
-- **THEN** el catálogo muestra los libros guardados y las altas y ventas simuladas siguen funcionando
-
-#### Scenario: Sin peticiones a la API desde la interfaz
-
-- **WHEN** se recorre la aplicación en la pestaña Red del navegador
-- **THEN** la interfaz no realiza peticiones a `/api` ni a otros orígenes
-
-#### Scenario: Código sin cliente HTTP
-
-- **WHEN** se revisan los archivos de `frontend/public/js/`
-- **THEN** no aparece `fetch(`, ni `async`, ni la cadena `/api`
 
 ### Requirement: Contexto de build acotado
 

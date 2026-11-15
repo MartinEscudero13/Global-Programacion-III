@@ -26,12 +26,17 @@ El paquete SHALL contener `frontend/` y `backend/` directamente en la raíz del 
 
 ### Requirement: Tooling fuera del paquete
 
-El `.gitattributes` de la raíz SHALL marcar con `export-ignore` todo el tooling de agentes y de gestión: `openspec/`, `docs/`, `knowledge-base/`, `design-system/`, `.opencode/`, `.atl/`, `AGENTS.md`, `CHANGES.md`, `.active-orchestrator-state.json`, `.gitattributes` y sus equivalentes dentro de `backend/`. Esos elementos MUST NOT aparecer en el paquete.
+El `.gitattributes` de la raíz SHALL marcar con `export-ignore` todo el tooling de agentes, de gestión y de pruebas: `openspec/`, `docs/`, `knowledge-base/`, `design-system/`, `.opencode/`, `.atl/`, `AGENTS.md`, `CHANGES.md`, `.active-orchestrator-state.json`, `.gitattributes`, `frontend/test/` y sus equivalentes dentro de `backend/`. Esos elementos MUST NOT aparecer en el paquete.
 
 #### Scenario: Tooling de la raíz excluido
 
 - **WHEN** se buscan `openspec/`, `docs/consigna-global.md`, `knowledge-base/`, `design-system/`, `.opencode/` o `AGENTS.md` dentro del paquete
 - **THEN** no aparece ninguno
+
+#### Scenario: Tooling del frontend excluido
+
+- **WHEN** se busca `frontend/test/` dentro del paquete
+- **THEN** no aparece el arnés de pruebas del frontend y sí aparecen `frontend/public/js/api.js` y el resto de los archivos entregables
 
 #### Scenario: Tooling del backend excluido
 
