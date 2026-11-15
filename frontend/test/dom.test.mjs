@@ -176,9 +176,8 @@ test('focus registra el elemento activo y form.reset vuelve a los valores inicia
   const numero = documento.createElement('input');
   const casilla = documento.createElement('input');
 
-  numero.value = '1';
-  casilla.type = 'checkbox';
-  casilla.checked = true;
+  numero.setAttribute('value', '1');
+  casilla.setAttribute('checked', '');
   formulario.append(numero, casilla);
   documento.body.append(formulario);
 

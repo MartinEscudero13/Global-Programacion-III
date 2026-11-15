@@ -1,4 +1,4 @@
-// DOM simulado mínimo para probar los módulos de `public/js/` sin navegador.
+﻿// DOM simulado mínimo para probar los módulos de `public/js/` sin navegador.
 // Cubre sólo el subconjunto que usan los módulos: creación de nodos, texto,
 // hijos, atributos, selectores simples, eventos con burbujeo, foco y
 // `form.reset()`. Se amplía cuando un caso lo exige (design.md, D9).
@@ -297,10 +297,8 @@ export class Elemento extends Nodo {
     this.attributes = new Map();
     this.hidden = false;
     this.disabled = false;
-    this._valor = '';
-    this._valorInicial = '';
-    this._marcado = false;
-    this._marcadoInicial = false;
+    this._valor = null;
+    this._marcado = null;
 
     const elemento = this;
 
@@ -375,39 +373,37 @@ export class Elemento extends Nodo {
   }
 
   get value() {
-    if (this.localName === 'select') {
-      const opcion = this.children.find(function (hijo) {
-        return hijo.localName === 'option' && hijo.value === this._valor;
-      }, this);
+    const vigente = this._valor === null ? this.getAttribute('value') || '' : this._valor;
 
-      return opcion ? this._valor : this._valor === undefined ? '' : this._valor;
+    if (this.localName === 'select') {
+      if (vigente === '') {
+        return '';
+      }
+
+      const opcion = this.children.find(function (hijo) {
+        return hijo.localName === 'option' && hijo.value === vigente;
+      });
+
+      return opcion ? vigente : '';
     }
 
-    return this._valor;
+    return vigente;
   }
 
   set value(valor) {
     this._valor = valor === null || valor === undefined ? '' : String(valor);
-
-    // La primera asignación fija el valor por omisión que restaura `reset()`;
-    // las siguientes sólo cambian el valor vigente.
-    if (this._valorInicialFijado !== true) {
-      this._valorInicial = this._valor;
-      this._valorInicialFijado = true;
-    }
   }
 
   get checked() {
+    if (this._marcado === null) {
+      return this.hasAttribute('checked');
+    }
+
     return this._marcado;
   }
 
   set checked(valor) {
     this._marcado = Boolean(valor);
-
-    if (this._marcadoInicialFijado !== true) {
-      this._marcadoInicial = this._marcado;
-      this._marcadoInicialFijado = true;
-    }
   }
 
   setAttribute(nombre, valor) {
@@ -490,8 +486,8 @@ export class Elemento extends Nodo {
         elemento.localName === 'select' ||
         elemento.localName === 'textarea'
       ) {
-        elemento._valor = elemento._valorInicial;
-        elemento._marcado = elemento._marcadoInicial;
+        elemento._valor = null;
+        elemento._marcado = null;
       }
     });
   }

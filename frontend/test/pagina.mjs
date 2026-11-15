@@ -54,11 +54,11 @@ function crear(documento, etiqueta, propiedades, hijos) {
   }
 
   if (configuracion.valor !== undefined) {
-    elemento.value = configuracion.valor;
+    elemento.setAttribute('value', configuracion.valor);
   }
 
   if (configuracion.marcado) {
-    elemento.checked = true;
+    elemento.setAttribute('checked', '');
   }
 
   (hijos || []).forEach(function (hijo) {
@@ -354,6 +354,28 @@ function formularioLibro(documento) {
     crear(documento, 'div', { clase: 'campo' }, [
       crear(documento, 'label', {
         clase: 'campo__etiqueta',
+        for: 'libro-stock',
+        texto: 'Stock (obligatorio)'
+      }),
+      crear(documento, 'input', {
+        id: 'libro-stock',
+        clase: 'campo__control',
+        type: 'number',
+        name: 'stock',
+        min: '0',
+        step: '1',
+        inputmode: 'numeric',
+        'aria-describedby': 'libro-stock-error'
+      }),
+      crear(documento, 'p', {
+        id: 'libro-stock-error',
+        clase: 'campo__error',
+        hidden: true
+      })
+    ]),
+    crear(documento, 'div', { clase: 'campo' }, [
+      crear(documento, 'label', {
+        clase: 'campo__etiqueta',
         for: 'libro-editorial',
         texto: 'Editorial (obligatoria)'
       }),
@@ -391,15 +413,86 @@ function formularioLibro(documento) {
     crear(
       documento,
       'fieldset',
-      { clase: 'campo campo--grupo campo--ancho', 'aria-describedby': 'libro-autores-error' },
+      { clase: 'campo campo--grupo campo--ancho', 'aria-describedby': 'libro-autor-error' },
       [
         crear(documento, 'legend', {
           clase: 'campo__etiqueta',
-          texto: 'Autores (al menos uno)'
+          texto: 'Autorías (al menos una)'
         }),
-        crear(documento, 'div', { id: 'libro-autores', clase: 'opciones' }),
         crear(documento, 'p', {
-          id: 'libro-autores-error',
+          clase: 'campo__ayuda',
+          texto:
+            'La API no expone el listado de autores: verificá el identificador con la consulta individual antes de agregarlo.'
+        }),
+        crear(documento, 'div', { clase: 'formulario__renglon' }, [
+          crear(documento, 'div', { clase: 'campo' }, [
+            crear(documento, 'label', {
+              clase: 'campo__etiqueta',
+              for: 'libro-autor-id',
+              texto: 'Identificador del autor'
+            }),
+            crear(documento, 'input', {
+              id: 'libro-autor-id',
+              clase: 'campo__control',
+              type: 'number',
+              name: 'autor-id',
+              min: '1',
+              step: '1',
+              inputmode: 'numeric',
+              autocomplete: 'off'
+            })
+          ]),
+          crear(documento, 'button', {
+            id: 'libro-autor-buscar',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Buscar autor'
+          })
+        ]),
+        crear(documento, 'p', {
+          id: 'libro-autor-nombre',
+          clase: 'campo__ayuda',
+          role: 'status'
+        }),
+        crear(documento, 'div', { clase: 'formulario__renglon' }, [
+          crear(documento, 'div', { clase: 'campo' }, [
+            crear(documento, 'label', {
+              clase: 'campo__etiqueta',
+              for: 'libro-autor-rol',
+              texto: 'Rol'
+            }),
+            crear(
+              documento,
+              'select',
+              { id: 'libro-autor-rol', clase: 'campo__control', name: 'autor-rol' },
+              [
+                { valor: 'autor', texto: 'Autor' },
+                { valor: 'coautor', texto: 'Coautor' },
+                { valor: 'traductor', texto: 'Traductor' },
+                { valor: 'ilustrador', texto: 'Ilustrador' }
+              ].map(function (opcion) {
+                return crear(documento, 'option', {
+                  valor: opcion.valor,
+                  texto: opcion.texto
+                });
+              })
+            )
+          ]),
+          crear(documento, 'button', {
+            id: 'libro-autor-agregar',
+            clase: 'boton boton--secundario',
+            type: 'button',
+            texto: 'Agregar autoría',
+            deshabilitado: true
+          })
+        ]),
+        crear(documento, 'ul', {
+          id: 'libro-autorias',
+          clase: 'autorias',
+          'aria-label': 'Autorías agregadas'
+        }),
+        crear(documento, 'p', {
+          id: 'libro-autor-error',
           clase: 'campo__error',
           hidden: true
         })
@@ -409,6 +502,20 @@ function formularioLibro(documento) {
 
   return crear(documento, 'form', { id: 'form-libro', clase: 'formulario' }, [
     crear(documento, 'h3', { clase: 'formulario__titulo', texto: 'Alta de libro' }),
+    crear(documento, 'p', {
+      id: 'libro-opciones-error',
+      clase: 'mensaje mensaje--error',
+      role: 'alert',
+      texto: 'No se pudieron cargar las editoriales y los géneros.',
+      hidden: true
+    }),
+    crear(documento, 'button', {
+      id: 'libro-opciones-reintentar',
+      clase: 'boton boton--secundario',
+      type: 'button',
+      texto: 'Reintentar carga de opciones',
+      hidden: true
+    }),
     rejilla,
     crear(documento, 'p', {
       id: 'libro-mensaje',
@@ -444,6 +551,34 @@ function formularioLibro(documento) {
 function tablaLibros(documento) {
   return crear(documento, 'div', { clase: 'panel' }, [
     crear(documento, 'h3', { clase: 'panel__titulo', texto: 'Libros registrados' }),
+    crear(documento, 'p', {
+      id: 'libros-cargando',
+      clase: 'mensaje mensaje--aviso',
+      role: 'status',
+      texto: 'Cargando…',
+      hidden: true
+    }),
+    crear(documento, 'p', {
+      id: 'libros-error',
+      clase: 'mensaje mensaje--error',
+      role: 'alert',
+      texto: 'No se pudo cargar el listado de libros.',
+      hidden: true
+    }),
+    crear(documento, 'button', {
+      id: 'libros-reintentar',
+      clase: 'boton boton--secundario',
+      type: 'button',
+      texto: 'Reintentar',
+      hidden: true
+    }),
+    crear(documento, 'p', {
+      id: 'libros-fin',
+      clase: 'mensaje mensaje--aviso',
+      role: 'status',
+      texto: 'No hay más resultados.',
+      hidden: true
+    }),
     crear(
       documento,
       'section',
@@ -461,7 +596,7 @@ function tablaLibros(documento) {
               crear(documento, 'th', { scope: 'col', texto: 'ISBN' }),
               crear(documento, 'th', { scope: 'col', texto: 'Editorial' }),
               crear(documento, 'th', { scope: 'col', texto: 'Género' }),
-              crear(documento, 'th', { scope: 'col', texto: 'Autores' }),
+              crear(documento, 'th', { scope: 'col', clase: 'tabla__numero', texto: 'Stock' }),
               crear(documento, 'th', { scope: 'col', clase: 'tabla__numero', texto: 'Precio' })
             ])
           ]),
@@ -475,7 +610,37 @@ function tablaLibros(documento) {
       role: 'status',
       texto: 'No hay libros registrados.',
       hidden: true
-    })
+    }),
+    crear(
+      documento,
+      'nav',
+      {
+        id: 'libros-paginacion',
+        clase: 'paginacion',
+        'aria-label': 'Paginación del listado de libros',
+        hidden: true
+      },
+      [
+        crear(documento, 'button', {
+          id: 'libros-anterior',
+          clase: 'boton boton--secundario',
+          type: 'button',
+          texto: 'Anterior'
+        }),
+        crear(documento, 'p', {
+          id: 'libros-pagina',
+          clase: 'paginacion__pagina',
+          role: 'status',
+          texto: 'Página 1'
+        }),
+        crear(documento, 'button', {
+          id: 'libros-siguiente',
+          clase: 'boton boton--secundario',
+          type: 'button',
+          texto: 'Siguiente'
+        })
+      ]
+    )
   ]);
 }
 

@@ -3,12 +3,14 @@
 
   const Libreria = (window.Libreria = window.Libreria || {});
   const TEXTO_SIN_GENERO = Libreria.utils.TEXTO_SIN_GENERO;
-  const ORDEN_CAMPOS = ['titulo', 'isbn', 'precio', 'editorialId', 'generoId', 'autorIds'];
+  const TAMANO = Libreria.api.TAMANO_PAGINA;
+  const ROLES = ['autor', 'coautor', 'traductor', 'ilustrador'];
 
   let refs = null;
-  let editorialesPorId = null;
-  let generosPorId = null;
-  let autoresPorId = null;
+  let estado = null;
+  let autorias = [];
+  let autorVerificado = null;
+  let opcionesListas = false;
   let iniciado = false;
 
   function crearCelda(texto, esNumero) {
@@ -22,47 +24,22 @@
     return celda;
   }
 
-  function obtenerEditorial(libro) {
-    const editorial = editorialesPorId.get(libro.editorialId);
-    return editorial ? editorial.nombre : '';
-  }
-
-  function obtenerGenero(libro) {
-    if (!libro.generoId) {
-      return TEXTO_SIN_GENERO;
-    }
-
-    const genero = generosPorId.get(libro.generoId);
-    return genero ? genero.nombre : TEXTO_SIN_GENERO;
-  }
-
-  function obtenerAutores(libro) {
-    return (libro.autorIds || [])
-      .map(function (autorId) {
-        const autor = autoresPorId.get(autorId);
-        return autor ? autor.nombre : '';
-      })
-      .filter(function (nombre) {
-        return nombre;
-      })
-      .join(', ');
-  }
-
   function crearFilaLibro(libro) {
     const fila = document.createElement('tr');
+
     fila.append(
       crearCelda(libro.titulo),
       crearCelda(libro.isbn),
-      crearCelda(obtenerEditorial(libro)),
-      crearCelda(obtenerGenero(libro)),
-      crearCelda(obtenerAutores(libro)),
+      crearCelda(libro.editorial ? libro.editorial.nombre : ''),
+      crearCelda(libro.genero ? libro.genero.nombre : TEXTO_SIN_GENERO),
+      crearCelda(String(libro.stock), true),
       crearCelda(Libreria.utils.formatearPrecio(libro.precio), true)
     );
+
     return fila;
   }
 
-  function renderizarTabla() {
-    const libros = Libreria.datos.libros;
+  function renderizarTabla(libros) {
     const fragmento = document.createDocumentFragment();
 
     libros.forEach(function (libro) {
@@ -71,233 +48,387 @@
 
     refs.cuerpo.replaceChildren(fragmento);
     refs.vacio.hidden = libros.length > 0;
+    refs.paginacion.hidden = libros.length === 0;
+
+    Libreria.utils.actualizarPaginacion({
+      anterior: refs.anterior,
+      siguiente: refs.siguiente,
+      pagina: refs.pagina,
+      desplazamiento: estado.desplazamiento,
+      tamano: TAMANO,
+      haySiguiente: libros.length === TAMANO
+    });
   }
 
-  function renderizarOpcionesEditorial() {
-    const valorPrevio = refs.editorial.value;
-    const opciones = Libreria.datos.editoriales.map(function (editorial) {
-      return { valor: editorial.id, texto: editorial.nombre };
-    });
+  async function cargarTabla(desplazamiento) {
+    estado.desplazamiento = desplazamiento;
+    refs.cargando.hidden = false;
+    refs.error.hidden = true;
+    refs.reintentar.hidden = true;
 
-    Libreria.utils.poblarSelect(
-      refs.editorial,
-      opciones,
-      'Seleccioná una editorial',
-      valorPrevio
-    );
-  }
+    try {
+      const libros = await Libreria.api.listarLibros({
+        limit: TAMANO,
+        offset: desplazamiento
+      });
 
-  function renderizarOpcionesGenero() {
-    const valorPrevio = refs.genero.value;
-    const opciones = Libreria.datos.generos.map(function (genero) {
-      return { valor: genero.id, texto: genero.nombre };
-    });
+      if (libros.length === 0 && desplazamiento > 0) {
+        refs.cargando.hidden = true;
+        await cargarTabla(Math.max(0, desplazamiento - TAMANO));
+        refs.fin.hidden = false;
+        return;
+      }
 
-    Libreria.utils.poblarSelect(refs.genero, opciones, TEXTO_SIN_GENERO, valorPrevio);
-  }
-
-  function renderizarOpcionesAutores() {
-    const fragmento = document.createDocumentFragment();
-
-    Libreria.datos.autores.forEach(function (autor) {
-      const etiqueta = document.createElement('label');
-      etiqueta.className = 'opcion';
-
-      const control = document.createElement('input');
-      control.type = 'checkbox';
-      control.name = 'autores';
-      control.value = autor.id;
-      control.setAttribute('aria-describedby', 'libro-autores-error');
-
-      etiqueta.append(control, document.createTextNode(' ' + autor.nombre));
-      fragmento.append(etiqueta);
-    });
-
-    refs.autores.replaceChildren(fragmento);
-  }
-
-  function renderizarOpcionesVenta() {
-    const valorPrevio = refs.ventaLibro.value;
-    const opciones = Libreria.datos.libros.map(function (libro) {
-      return { valor: libro.id, texto: libro.titulo };
-    });
-
-    Libreria.utils.poblarSelect(
-      refs.ventaLibro,
-      opciones,
-      'Seleccioná un libro',
-      valorPrevio
-    );
+      renderizarTabla(libros);
+    } catch (error) {
+      refs.error.textContent = error.mensaje;
+      refs.error.hidden = false;
+      refs.reintentar.hidden = false;
+      refs.paginacion.hidden = true;
+    } finally {
+      refs.cargando.hidden = true;
+    }
   }
 
   function refrescar() {
-    renderizarTabla();
-    renderizarOpcionesVenta();
+    return cargarTabla(0);
+  }
+
+  function opcionesDeEditorial() {
+    return refs.editoriales.map(function (editorial) {
+      return { valor: String(editorial.id), texto: editorial.nombre };
+    });
+  }
+
+  function opcionesDeGenero() {
+    return refs.generos.map(function (genero) {
+      return { valor: String(genero.id), texto: genero.nombre };
+    });
+  }
+
+  function poblarSelects() {
+    const editorialPrevia = refs.editorial.value;
+    const generoPrevio = refs.genero.value;
+
+    Libreria.utils.poblarSelect(
+      refs.editorial,
+      opcionesDeEditorial(),
+      'Seleccioná una editorial',
+      editorialPrevia
+    );
+    Libreria.utils.poblarSelect(
+      refs.genero,
+      opcionesDeGenero(),
+      TEXTO_SIN_GENERO,
+      generoPrevio
+    );
+  }
+
+  function marcarOpciones(disponibles, mensaje) {
+    opcionesListas = disponibles;
+    refs.registrar.disabled = !disponibles;
+    refs.opcionesError.hidden = disponibles;
+    refs.opcionesReintentar.hidden = disponibles;
+
+    if (!disponibles) {
+      refs.opcionesError.textContent =
+        mensaje || 'No se pudieron cargar las editoriales y los géneros.';
+    }
+  }
+
+  async function cargarOpciones() {
+    refs.opcionesError.hidden = true;
+    refs.opcionesReintentar.hidden = true;
+
+    try {
+      const resultados = await Promise.all([
+        Libreria.api.listarTodas('editoriales'),
+        Libreria.api.listarTodas('generos')
+      ]);
+      const editoriales = resultados[0];
+      const generos = resultados[1];
+
+      refs.editoriales = editoriales.items;
+      refs.generos = generos.items;
+      poblarSelects();
+
+      if (editoriales.truncado || generos.truncado) {
+        marcarOpciones(
+          true,
+          'La lista de editoriales o géneros quedó incompleta porque supera el máximo de 2000 elementos.'
+        );
+        refs.opcionesError.className = 'mensaje mensaje--aviso';
+        refs.opcionesError.hidden = false;
+        return;
+      }
+
+      refs.opcionesError.className = 'mensaje mensaje--error';
+      marcarOpciones(true);
+    } catch (error) {
+      refs.opcionesError.className = 'mensaje mensaje--error';
+      marcarOpciones(false, error.mensaje);
+    }
+  }
+
+  function limpiarErrorAutor() {
+    refs.errores.autorias.textContent = '';
+    refs.errores.autorias.hidden = true;
+    refs.grupoAutorias.removeAttribute('aria-invalid');
+  }
+
+  function mostrarErrorAutor(mensaje) {
+    refs.errores.autorias.textContent = mensaje;
+    refs.errores.autorias.hidden = false;
+    refs.grupoAutorias.setAttribute('aria-invalid', 'true');
+  }
+
+  function renderizarAutorias() {
+    const fragmento = document.createDocumentFragment();
+
+    autorias.forEach(function (autoria) {
+      const item = document.createElement('li');
+      const nombre = document.createElement('strong');
+      const detalle = document.createElement('span');
+      const quitar = document.createElement('button');
+
+      nombre.textContent = autoria.nombre;
+      detalle.textContent = ' · ' + autoria.rol + ' · orden ' + autoria.orden;
+      quitar.type = 'button';
+      quitar.className = 'boton boton--peligro boton--chico';
+      quitar.dataset.autorId = autoria.autor_id;
+      quitar.textContent = 'Quitar';
+
+      const oculto = document.createElement('span');
+      oculto.className = 'visualmente-oculto';
+      oculto.textContent = ' ' + autoria.nombre;
+      quitar.append(oculto);
+
+      item.append(nombre, detalle, quitar);
+      fragmento.append(item);
+    });
+
+    refs.autoriasLista.replaceChildren(fragmento);
+  }
+
+  function limpiarAutor() {
+    autorVerificado = null;
+    refs.autorNombre.textContent = '';
+    refs.autorAgregar.disabled = true;
+    refs.autorId.value = '';
+  }
+
+  function describirAutor(autor) {
+    return 'Autor ' + autor.id + ': ' + autor.nombre;
+  }
+
+  async function buscarAutor() {
+    const texto = refs.autorId.value.trim();
+    const identificador = Number(texto);
+
+    refs.autorNombre.textContent = '';
+    refs.autorAgregar.disabled = true;
+    autorVerificado = null;
+    limpiarErrorAutor();
+
+    if (!texto || !Number.isInteger(identificador) || identificador < 1) {
+      mostrarErrorAutor('Ingresá un identificador de autor válido.');
+      refs.autorId.focus();
+      return;
+    }
+
+    refs.autorNombre.textContent = 'Buscando…';
+
+    try {
+      const autor = await Libreria.api.obtenerAutor(identificador);
+
+      autorVerificado = { id: autor.id, nombre: autor.nombre };
+      refs.autorNombre.textContent = describirAutor(autor);
+      refs.autorAgregar.disabled = false;
+    } catch (error) {
+      refs.autorNombre.textContent = '';
+      mostrarErrorAutor(error.mensaje);
+    }
+  }
+
+  function agregarAutoria() {
+    limpiarErrorAutor();
+
+    if (!autorVerificado) {
+      mostrarErrorAutor('Verificá el autor por identificador antes de agregarlo.');
+      return;
+    }
+
+    const repetido = autorias.some(function (autoria) {
+      return autoria.autor_id === autorVerificado.id;
+    });
+
+    if (repetido) {
+      mostrarErrorAutor('El autor ya está en la lista de autorías.');
+      return;
+    }
+
+    const rol = refs.autorRol.value;
+
+    if (ROLES.indexOf(rol) === -1) {
+      mostrarErrorAutor('Elegí un rol válido para la autoría.');
+      return;
+    }
+
+    autorias.push({
+      autor_id: autorVerificado.id,
+      nombre: autorVerificado.nombre,
+      rol: rol,
+      orden: autorias.length + 1
+    });
+    renderizarAutorias();
+    limpiarAutor();
+  }
+
+  function quitarAutoria(autorId) {
+    const indice = autorias.findIndex(function (autoria) {
+      return String(autoria.autor_id) === String(autorId);
+    });
+
+    if (indice === -1) {
+      return;
+    }
+
+    autorias.splice(indice, 1);
+    autorias.forEach(function (autoria, posicion) {
+      autoria.orden = posicion + 1;
+    });
+    renderizarAutorias();
   }
 
   function leerFormulario() {
-    const autorIds = [];
-
-    refs.autores.querySelectorAll('input[name="autores"]:checked').forEach(function (control) {
-      autorIds.push(control.value);
-    });
-
     return {
       titulo: refs.titulo.value.trim(),
       isbn: refs.isbn.value.trim(),
       precio: refs.precio.value.trim(),
+      stock: refs.stock.value.trim(),
       editorialId: refs.editorial.value,
-      generoId: refs.genero.value || null,
-      autorIds: autorIds
+      generoId: refs.genero.value,
+      autorias: autorias.slice()
     };
   }
 
   function validarLibro(datos) {
     const errores = {};
-    const titulo = datos.titulo;
-    const isbn = datos.isbn;
-    const isbnNormalizado = Libreria.utils.normalizarIsbn(isbn);
     let precio = null;
-    let generoId = datos.generoId;
+    let stock = null;
 
-    if (!titulo) {
+    if (!datos.titulo) {
       errores.titulo = 'Ingresá el título.';
     }
 
-    if (!isbn) {
+    if (!datos.isbn) {
       errores.isbn = 'Ingresá el ISBN.';
-    } else {
-      const repetido = Libreria.datos.libros.some(function (libro) {
-        return Libreria.utils.normalizarIsbn(libro.isbn) === isbnNormalizado;
-      });
-
-      if (repetido) {
-        errores.isbn = 'Ya existe un libro con ese ISBN.';
-      }
     }
 
     if (!datos.precio) {
       errores.precio = 'Ingresá el precio.';
     } else {
-      const numero = Number(datos.precio);
+      const numero = Libreria.utils.parsearImporte(datos.precio);
 
       if (!Number.isFinite(numero) || numero <= 0) {
         errores.precio = 'El precio debe ser un número mayor que cero.';
       } else {
         precio = Libreria.utils.redondearCentavos(numero);
+      }
+    }
 
-        if (!Number.isFinite(precio) || precio < 0.01) {
-          errores.precio = 'El precio debe ser al menos 0,01.';
-        }
+    if (datos.stock === '') {
+      errores.stock = 'Ingresá el stock.';
+    } else {
+      const numero = Number(datos.stock);
+
+      if (!Number.isInteger(numero) || numero < 0) {
+        errores.stock = 'El stock debe ser un número entero mayor o igual a cero.';
+      } else {
+        stock = numero;
       }
     }
 
     if (!datos.editorialId) {
       errores.editorialId = 'Seleccioná una editorial.';
-    } else if (!editorialesPorId.has(datos.editorialId)) {
-      errores.editorialId = 'La editorial seleccionada no existe.';
     }
 
-    if (generoId) {
-      if (!generosPorId.has(generoId)) {
-        errores.generoId = 'El género seleccionado no existe.';
-      }
-    } else {
-      generoId = null;
-    }
-
-    if (datos.autorIds.length === 0) {
-      errores.autorIds = 'Seleccioná al menos un autor.';
-    } else {
-      const autorInvalido = datos.autorIds.some(function (autorId) {
-        return !autoresPorId.has(autorId);
-      });
-
-      if (autorInvalido) {
-        errores.autorIds = 'Uno de los autores seleccionados no existe.';
-      }
+    if (datos.autorias.length === 0) {
+      errores.autorias = 'Agregá al menos una autoría.';
     }
 
     return {
       valido: Object.keys(errores).length === 0,
       errores: errores,
       valores: {
-        titulo: titulo,
-        isbn: isbn,
+        titulo: datos.titulo,
+        isbn: datos.isbn,
         precio: precio,
+        stock: stock,
         editorialId: datos.editorialId,
-        generoId: generoId,
-        autorIds: datos.autorIds.slice()
+        generoId: datos.generoId || null,
+        autorias: datos.autorias
       }
     };
   }
 
-  function obtenerControlesAutores() {
-    return refs.autores.querySelectorAll('input[name="autores"]');
+  function controlesDeCampo(clave) {
+    if (clave === 'autorias') {
+      return null;
+    }
+
+    return refs.controles[clave];
+  }
+
+  function erroresDeCampo(clave) {
+    return refs.errores[clave];
   }
 
   function marcarError(clave, mensaje) {
-    const error = refs.errores[clave];
+    const error = erroresDeCampo(clave);
+
     error.textContent = mensaje;
     error.hidden = false;
 
-    if (clave === 'autorIds') {
-      refs.grupoAutores.setAttribute('aria-invalid', 'true');
-      obtenerControlesAutores().forEach(function (control) {
-        control.setAttribute('aria-invalid', 'true');
-      });
+    if (clave === 'autorias') {
+      refs.grupoAutorias.setAttribute('aria-invalid', 'true');
       return;
     }
 
-    refs.controles[clave].setAttribute('aria-invalid', 'true');
+    controlesDeCampo(clave).setAttribute('aria-invalid', 'true');
   }
 
   function limpiarError(clave) {
-    const error = refs.errores[clave];
+    const error = erroresDeCampo(clave);
+
     error.textContent = '';
     error.hidden = true;
 
-    if (clave === 'autorIds') {
-      refs.grupoAutores.removeAttribute('aria-invalid');
-      obtenerControlesAutores().forEach(function (control) {
-        control.removeAttribute('aria-invalid');
-      });
+    if (clave === 'autorias') {
+      refs.grupoAutorias.removeAttribute('aria-invalid');
       return;
     }
 
-    refs.controles[clave].removeAttribute('aria-invalid');
+    controlesDeCampo(clave).removeAttribute('aria-invalid');
   }
+
+  const CAMPOS = [
+    'titulo',
+    'isbn',
+    'precio',
+    'stock',
+    'editorialId',
+    'generoId',
+    'autorias'
+  ];
 
   function limpiarErrores() {
-    ORDEN_CAMPOS.forEach(function (clave) {
-      limpiarError(clave);
-    });
-    refs.resumen.hidden = true;
-  }
-
-  function actualizarResumen() {
-    const hayErrores = ORDEN_CAMPOS.some(function (clave) {
-      return !refs.errores[clave].hidden;
-    });
-
-    refs.resumen.hidden = !hayErrores;
-  }
-
-  function enfocarCampo(clave) {
-    if (clave === 'autorIds') {
-      const primero = refs.autores.querySelector('input[name="autores"]');
-
-      if (primero) {
-        primero.focus();
-      }
-      return;
-    }
-
-    refs.controles[clave].focus();
+    CAMPOS.forEach(limpiarError);
+    refs.mensaje.hidden = true;
   }
 
   function mostrarErrores(errores) {
-    const claves = ORDEN_CAMPOS.filter(function (clave) {
+    const claves = CAMPOS.filter(function (clave) {
       return Boolean(errores[clave]);
     });
 
@@ -305,10 +436,14 @@
       marcarError(clave, errores[clave]);
     });
 
-    refs.resumen.hidden = false;
-
     if (claves.length > 0) {
-      enfocarCampo(claves[0]);
+      const clave = claves[0];
+
+      if (clave === 'autorias') {
+        refs.autorId.focus();
+      } else {
+        controlesDeCampo(clave).focus();
+      }
     }
   }
 
@@ -316,11 +451,46 @@
     refs.exito.hidden = true;
   }
 
-  function mostrarExito() {
+  function mostrarExito(mensaje) {
+    refs.exito.textContent = mensaje;
     refs.exito.hidden = false;
   }
 
-  function registrarLibro(evento) {
+  function cuerpoLibro(valores) {
+    const cuerpo = {
+      isbn: valores.isbn,
+      titulo: valores.titulo,
+      precio: valores.precio.toFixed(2),
+      stock: valores.stock,
+      editorial_id: Number(valores.editorialId),
+      autores: valores.autorias.map(function (autoria) {
+        return {
+          autor_id: autoria.autor_id,
+          rol: autoria.rol,
+          orden: autoria.orden
+        };
+      })
+    };
+
+    if (valores.generoId) {
+      cuerpo.genero_id = Number(valores.generoId);
+    }
+
+    return cuerpo;
+  }
+
+  function limpiarFormulario() {
+    refs.form.reset();
+    autorias = [];
+    autorVerificado = null;
+    refs.autoriasLista.replaceChildren();
+    refs.autorNombre.textContent = '';
+    refs.autorAgregar.disabled = true;
+    refs.autorId.value = '';
+    limpiarErrores();
+  }
+
+  async function registrarLibro(evento) {
     evento.preventDefault();
     ocultarExito();
     limpiarErrores();
@@ -332,30 +502,54 @@
       return;
     }
 
-    Libreria.datos.libros.push({
-      id: Libreria.utils.generarId('l', Libreria.datos.libros),
-      titulo: resultado.valores.titulo,
-      isbn: resultado.valores.isbn,
-      precio: resultado.valores.precio,
-      editorialId: resultado.valores.editorialId,
-      generoId: resultado.valores.generoId,
-      autorIds: resultado.valores.autorIds
-    });
-    Libreria.store.guardarLibros();
+    if (!opcionesListas) {
+      refs.opcionesError.hidden = false;
+      return;
+    }
 
-    refrescar();
-    Libreria.catalogo.refrescar();
-    refs.form.reset();
-    limpiarErrores();
-    mostrarExito();
-    refs.titulo.focus();
+    refs.registrar.disabled = true;
+
+    try {
+      const creado = await Libreria.api.crearLibro(cuerpoLibro(resultado.valores));
+
+      limpiarFormulario();
+      mostrarExito(
+        'Listo: se registró «' + creado.titulo + '» con el identificador ' + creado.id + '.'
+      );
+      refs.titulo.focus();
+      await cargarTabla(0);
+      await Libreria.catalogo.refrescar();
+    } catch (error) {
+      refs.mensaje.textContent = error.mensaje;
+      refs.mensaje.hidden = false;
+    } finally {
+      refs.registrar.disabled = !opcionesListas;
+    }
   }
 
   function configurarEventos() {
     refs.form.addEventListener('submit', registrarLibro);
+    refs.opcionesReintentar.addEventListener('click', function () {
+      cargarOpciones();
+    });
+    refs.autorBuscar.addEventListener('click', buscarAutor);
+    refs.autorAgregar.addEventListener('click', agregarAutoria);
+    refs.autorId.addEventListener('input', limpiarAutor);
+    refs.autoriasLista.addEventListener('click', function (evento) {
+      const boton = evento.target.closest('button[data-autor-id]');
 
-    refs.limpiar.addEventListener('click', function () {
+      if (boton) {
+        quitarAutoria(boton.dataset.autorId);
+      }
+    });
+
+    refs.form.addEventListener('reset', function () {
       window.setTimeout(function () {
+        autorias = [];
+        autorVerificado = null;
+        refs.autoriasLista.replaceChildren();
+        refs.autorNombre.textContent = '';
+        refs.autorAgregar.disabled = true;
         limpiarErrores();
         ocultarExito();
       }, 0);
@@ -366,7 +560,7 @@
 
       function manejarCambio() {
         limpiarError(clave);
-        actualizarResumen();
+        refs.mensaje.hidden = true;
         ocultarExito();
       }
 
@@ -374,41 +568,65 @@
       control.addEventListener('change', manejarCambio);
     });
 
-    refs.autores.addEventListener('change', function () {
-      limpiarError('autorIds');
-      actualizarResumen();
-      ocultarExito();
+    refs.anterior.addEventListener('click', function () {
+      cargarTabla(Math.max(0, estado.desplazamiento - TAMANO));
+    });
+    refs.siguiente.addEventListener('click', function () {
+      cargarTabla(estado.desplazamiento + TAMANO);
+    });
+    refs.reintentar.addEventListener('click', function () {
+      cargarTabla(estado.desplazamiento);
     });
   }
 
-  function iniciarLibros() {
+  async function iniciarLibros() {
     if (iniciado) {
       return;
     }
 
     iniciado = true;
+    estado = { desplazamiento: 0 };
     refs = {
       form: document.getElementById('form-libro'),
       titulo: document.getElementById('libro-titulo'),
       isbn: document.getElementById('libro-isbn'),
       precio: document.getElementById('libro-precio'),
+      stock: document.getElementById('libro-stock'),
       editorial: document.getElementById('libro-editorial'),
       genero: document.getElementById('libro-genero'),
-      autores: document.getElementById('libro-autores'),
-      grupoAutores: document.getElementById('libro-autores').closest('fieldset'),
-      limpiar: document.getElementById('libro-limpiar'),
-      resumen: document.getElementById('libro-mensaje'),
+      mensaje: document.getElementById('libro-mensaje'),
       exito: document.getElementById('libro-exito'),
+      registrar: document.getElementById('libro-registrar'),
+      limpiar: document.getElementById('libro-limpiar'),
+      opcionesError: document.getElementById('libro-opciones-error'),
+      opcionesReintentar: document.getElementById('libro-opciones-reintentar'),
+      autorId: document.getElementById('libro-autor-id'),
+      autorBuscar: document.getElementById('libro-autor-buscar'),
+      autorNombre: document.getElementById('libro-autor-nombre'),
+      autorRol: document.getElementById('libro-autor-rol'),
+      autorAgregar: document.getElementById('libro-autor-agregar'),
+      autoriasLista: document.getElementById('libro-autorias'),
+      grupoAutorias: document.getElementById('libro-autorias').closest('fieldset'),
       cuerpo: document.querySelector('#tabla-libros tbody'),
       vacio: document.getElementById('libros-vacio'),
-      ventaLibro: document.getElementById('venta-libro'),
+      cargando: document.getElementById('libros-cargando'),
+      error: document.getElementById('libros-error'),
+      reintentar: document.getElementById('libros-reintentar'),
+      fin: document.getElementById('libros-fin'),
+      paginacion: document.getElementById('libros-paginacion'),
+      anterior: document.getElementById('libros-anterior'),
+      siguiente: document.getElementById('libros-siguiente'),
+      pagina: document.getElementById('libros-pagina'),
+      editoriales: [],
+      generos: [],
       errores: {
         titulo: document.getElementById('libro-titulo-error'),
         isbn: document.getElementById('libro-isbn-error'),
         precio: document.getElementById('libro-precio-error'),
+        stock: document.getElementById('libro-stock-error'),
         editorialId: document.getElementById('libro-editorial-error'),
         generoId: document.getElementById('libro-genero-error'),
-        autorIds: document.getElementById('libro-autores-error')
+        autorias: document.getElementById('libro-autor-error')
       }
     };
 
@@ -416,19 +634,14 @@
       titulo: refs.titulo,
       isbn: refs.isbn,
       precio: refs.precio,
+      stock: refs.stock,
       editorialId: refs.editorial,
       generoId: refs.genero
     };
 
-    editorialesPorId = Libreria.utils.indexarPorId(Libreria.datos.editoriales);
-    generosPorId = Libreria.utils.indexarPorId(Libreria.datos.generos);
-    autoresPorId = Libreria.utils.indexarPorId(Libreria.datos.autores);
-
-    renderizarOpcionesEditorial();
-    renderizarOpcionesGenero();
-    renderizarOpcionesAutores();
+    refs.registrar.disabled = true;
     configurarEventos();
-    refrescar();
+    await Promise.all([cargarOpciones(), cargarTabla(0)]);
   }
 
   Libreria.libros = {

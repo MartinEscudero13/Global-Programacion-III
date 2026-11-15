@@ -87,6 +87,8 @@
         <div class="disposicion-alta">
           <form class="formulario" id="form-libro" novalidate>
             <h3 class="formulario__titulo">Alta de libro</h3>
+            <p class="mensaje mensaje--error" id="libro-opciones-error" role="alert" hidden>No se pudieron cargar las editoriales y los géneros.</p>
+            <button class="boton boton--secundario" id="libro-opciones-reintentar" type="button" hidden>Reintentar carga de opciones</button>
             <div class="formulario__rejilla">
               <div class="campo">
                 <label class="campo__etiqueta" for="libro-titulo">Título <span class="campo__obligatorio">(obligatorio)</span></label>
@@ -96,13 +98,18 @@
               <div class="campo">
                 <label class="campo__etiqueta" for="libro-isbn">ISBN <span class="campo__obligatorio">(obligatorio)</span></label>
                 <input class="campo__control" id="libro-isbn" name="isbn" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-describedby="libro-isbn-ayuda libro-isbn-error" required>
-                <p class="campo__ayuda" id="libro-isbn-ayuda">Se compara sin espacios ni guiones.</p>
+                <p class="campo__ayuda" id="libro-isbn-ayuda">La unicidad la controla el servidor.</p>
                 <p class="campo__error" id="libro-isbn-error" hidden></p>
               </div>
               <div class="campo">
                 <label class="campo__etiqueta" for="libro-precio">Precio <span class="campo__obligatorio">(obligatorio)</span></label>
                 <input class="campo__control" id="libro-precio" name="precio" type="number" min="0.01" step="0.01" inputmode="decimal" aria-describedby="libro-precio-error" required>
                 <p class="campo__error" id="libro-precio-error" hidden></p>
+              </div>
+              <div class="campo">
+                <label class="campo__etiqueta" for="libro-stock">Stock <span class="campo__obligatorio">(obligatorio)</span></label>
+                <input class="campo__control" id="libro-stock" name="stock" type="number" min="0" step="1" inputmode="numeric" aria-describedby="libro-stock-error" required>
+                <p class="campo__error" id="libro-stock-error" hidden></p>
               </div>
               <div class="campo">
                 <label class="campo__etiqueta" for="libro-editorial">Editorial <span class="campo__obligatorio">(obligatoria)</span></label>
@@ -119,10 +126,31 @@
                 <p class="campo__ayuda">Opcional.</p>
                 <p class="campo__error" id="libro-genero-error" hidden></p>
               </div>
-              <fieldset class="campo campo--grupo campo--ancho" aria-describedby="libro-autores-error">
-                <legend class="campo__etiqueta">Autores <span class="campo__obligatorio">(al menos uno)</span></legend>
-                <div class="opciones" id="libro-autores"></div>
-                <p class="campo__error" id="libro-autores-error" hidden></p>
+              <fieldset class="campo campo--grupo campo--ancho" aria-describedby="libro-autor-error">
+                <legend class="campo__etiqueta">Autorías <span class="campo__obligatorio">(al menos una)</span></legend>
+                <p class="campo__ayuda">La API no expone el listado de autores: verificá el identificador con la consulta individual antes de agregarlo.</p>
+                <div class="formulario__renglon">
+                  <div class="campo">
+                    <label class="campo__etiqueta" for="libro-autor-id">Identificador del autor</label>
+                    <input class="campo__control" id="libro-autor-id" name="autor-id" type="number" min="1" step="1" inputmode="numeric" autocomplete="off">
+                  </div>
+                  <button class="boton boton--secundario" id="libro-autor-buscar" type="button">Buscar autor</button>
+                </div>
+                <p class="campo__ayuda" id="libro-autor-nombre" role="status"></p>
+                <div class="formulario__renglon">
+                  <div class="campo">
+                    <label class="campo__etiqueta" for="libro-autor-rol">Rol</label>
+                    <select class="campo__control" id="libro-autor-rol" name="autor-rol">
+                      <option value="autor">Autor</option>
+                      <option value="coautor">Coautor</option>
+                      <option value="traductor">Traductor</option>
+                      <option value="ilustrador">Ilustrador</option>
+                    </select>
+                  </div>
+                  <button class="boton boton--secundario" id="libro-autor-agregar" type="button" disabled>Agregar autoría</button>
+                </div>
+                <ul class="autorias" id="libro-autorias" aria-label="Autorías agregadas"></ul>
+                <p class="campo__error" id="libro-autor-error" hidden></p>
               </fieldset>
             </div>
             <p class="mensaje mensaje--error" id="libro-mensaje" role="alert" hidden>Revisá los campos marcados.</p>
@@ -135,6 +163,10 @@
 
           <div class="panel">
             <h3 class="panel__titulo">Libros registrados</h3>
+            <p class="mensaje mensaje--aviso" id="libros-cargando" role="status" hidden>Cargando…</p>
+            <p class="mensaje mensaje--error" id="libros-error" role="alert" hidden>No se pudo cargar el listado de libros.</p>
+            <button class="boton boton--secundario" id="libros-reintentar" type="button" hidden>Reintentar</button>
+            <p class="mensaje mensaje--aviso" id="libros-fin" role="status" hidden>No hay más resultados.</p>
             <section class="tabla-contenedor" aria-labelledby="libros-tabla-titulo" tabindex="0">
               <table class="tabla" id="tabla-libros">
                 <caption class="tabla__titulo visualmente-oculto" id="libros-tabla-titulo">Listado de libros</caption>
@@ -144,7 +176,7 @@
                     <th scope="col">ISBN</th>
                     <th scope="col">Editorial</th>
                     <th scope="col">Género</th>
-                    <th scope="col">Autores</th>
+                    <th scope="col" class="tabla__numero">Stock</th>
                     <th scope="col" class="tabla__numero">Precio</th>
                   </tr>
                 </thead>
@@ -152,6 +184,11 @@
               </table>
             </section>
             <p class="mensaje mensaje--vacio" id="libros-vacio" role="status" hidden>No hay libros registrados.</p>
+            <nav class="paginacion" id="libros-paginacion" aria-label="Paginación del listado de libros" hidden>
+              <button class="boton boton--secundario" id="libros-anterior" type="button">Anterior</button>
+              <p class="paginacion__pagina" id="libros-pagina" role="status">Página 1</p>
+              <button class="boton boton--secundario" id="libros-siguiente" type="button">Siguiente</button>
+            </nav>
           </div>
         </div>
       </section>

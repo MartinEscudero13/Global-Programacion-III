@@ -103,31 +103,31 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
 
 ## 4. Alta de libros
 
-- [ ] 4.1 Agregar al HTML y al fixture los controles del alta: `#libro-stock` y su error, `#libro-autor-id`, `#libro-autor-buscar`, `#libro-autor-nombre`, `#libro-autor-rol`, `#libro-autor-agregar`, `#libro-autor-error`, `#libro-autorias`, `#libro-opciones-error`, `#libro-opciones-reintentar`, la paginación de la tabla (`#libros-paginacion`, `#libros-anterior`, `#libros-siguiente`, `#libros-pagina`, `#libros-fin`, `#libros-cargando`, `#libros-error`, `#libros-reintentar`).
+- [x] 4.1 Agregar al HTML y al fixture los controles del alta: `#libro-stock` y su error, `#libro-autor-id`, `#libro-autor-buscar`, `#libro-autor-nombre`, `#libro-autor-rol`, `#libro-autor-agregar`, `#libro-autor-error`, `#libro-autorias`, `#libro-opciones-error`, `#libro-opciones-reintentar`, la paginación de la tabla (`#libros-paginacion`, `#libros-anterior`, `#libros-siguiente`, `#libros-pagina`, `#libros-fin`, `#libros-cargando`, `#libros-error`, `#libros-reintentar`).
   - RED: agregar ids al HTML sin el fixture; `node --test frontend/test` falla en la guarda de ids.
   - GREEN: completar `pagina.mjs`; pasa.
   - TRIANGULACIÓN: el test de accesibilidad del fixture verifica `label[for]` y `aria-describedby` de los campos nuevos; pasa.
-- [ ] 4.2 Cargar editoriales y géneros desde la API con `listarTodas`, poblar los selectores e informar el fallo con reintento sin dejar selectores vacíos silenciosos.
+- [x] 4.2 Cargar editoriales y géneros desde la API con `listarTodas`, poblar los selectores e informar el fallo con reintento sin dejar selectores vacíos silenciosos.
   - RED: `frontend/test/libros.test.mjs` con 150 editoriales y con `fetch` que falla; falla porque usa `Libreria.datos`.
   - GREEN: implementar la carga, el poblado y el error; pasan.
   - TRIANGULACIÓN: el reintento con la API disponible completa los selectores y conserva «Sin clasificar» en géneros.
-- [ ] 4.3 Implementar las autorías por identificador: consultar `GET /api/autores/{id}`, mostrar el nombre devuelto, agregar con rol y orden correlativo, quitar y rechazar duplicados.
+- [x] 4.3 Implementar las autorías por identificador: consultar `GET /api/autores/{id}`, mostrar el nombre devuelto, agregar con rol y orden correlativo, quitar y rechazar duplicados.
   - RED: casos en `libros.test.mjs` (éxito, 404, duplicado, quitar); fallan.
   - GREEN: implementar la consulta y la lista de autorías; pasan.
   - TRIANGULACIÓN: agregar dos autores con roles distintos asigna orden 1 y 2 y quitar el primero reordena el envío.
-- [ ] 4.4 Implementar la validación local del alta: título, ISBN, precio mayor que cero, stock entero mayor o igual a cero, editorial y al menos una autoría, sin enviar petición cuando hay errores.
+- [x] 4.4 Implementar la validación local del alta: título, ISBN, precio mayor que cero, stock entero mayor o igual a cero, editorial y al menos una autoría, sin enviar petición cuando hay errores.
   - RED: casos en `libros.test.mjs` con campos vacíos, stock `-1`, stock `1.5` y precio `0`, verificando que no hubo `fetch`; fallan.
   - GREEN: implementar la validación y el marcado por campo; pasan.
   - TRIANGULACIÓN: un formulario válido completo no muestra errores y sí envía una petición.
-- [ ] 4.5 Implementar el envío del alta: cuerpo exacto con `precio` como string decimal, `stock` entero, `editorial_id`, `genero_id` opcional y autorías con `autor_id`, `rol` y `orden`; con 201 confirmar con los datos devueltos, limpiar y refrescar tabla y catálogo.
+- [x] 4.5 Implementar el envío del alta: cuerpo exacto con `precio` como string decimal, `stock` entero, `editorial_id`, `genero_id` opcional y autorías con `autor_id`, `rol` y `orden`; con 201 confirmar con los datos devueltos, limpiar y refrescar tabla y catálogo.
   - RED: casos en `libros.test.mjs` que comparan el cuerpo y el estado posterior al 201; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: alta sin género omite `genero_id` y el libro creado aparece en la tabla y en el catálogo con el id del servidor.
-- [ ] 4.6 Implementar los errores del alta: 409 muestra el mensaje del servidor conservando los campos y sin éxito; 422 muestra el detalle legible.
+- [x] 4.6 Implementar los errores del alta: 409 muestra el mensaje del servidor conservando los campos y sin éxito; 422 muestra el detalle legible.
   - RED: casos en `libros.test.mjs` con 409 y 422; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: tras el 409 se corrige el ISBN y el reenvío usa el nuevo valor sin perder los demás campos.
-- [ ] 4.7 Implementar la tabla de libros paginada con `GET /api/libros/`: primera página, «Anterior/Siguiente», estados de carga, vacío, fin y error con reintento.
+- [x] 4.7 Implementar la tabla de libros paginada con `GET /api/libros/`: primera página, «Anterior/Siguiente», estados de carga, vacío, fin y error con reintento.
   - RED: casos en `libros.test.mjs` con 20, 5 y 0 libros y con `fetch` que falla; fallan.
   - GREEN: implementar con la ayuda de paginación de 3.8; pasan.
   - TRIANGULACIÓN: un alta exitosa vuelve a la primera página y muestra el libro nuevo.

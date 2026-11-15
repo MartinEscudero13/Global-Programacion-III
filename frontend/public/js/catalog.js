@@ -176,6 +176,10 @@
   }
 
   function refrescar() {
+    if (!refs) {
+      return Promise.resolve();
+    }
+
     return cargar(0);
   }
 
