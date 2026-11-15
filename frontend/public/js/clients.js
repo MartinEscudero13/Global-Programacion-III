@@ -5,25 +5,31 @@
   const ORDEN_CAMPOS = ['nombre', 'email'];
 
   let refs = null;
+  let clientes = [];
   let iniciado = false;
 
-  function crearCelda(texto) {
+  function crearCelda(texto, esNumero) {
     const celda = document.createElement('td');
     celda.textContent = texto;
+
+    if (esNumero) {
+      celda.className = 'tabla__numero';
+    }
+
     return celda;
   }
 
   function crearFilaCliente(cliente) {
     const fila = document.createElement('tr');
     const email = crearCelda(cliente.email);
-    email.className = 'tabla__email';
 
-    fila.append(crearCelda(cliente.nombre), email);
+    email.className = 'tabla__email';
+    fila.append(crearCelda(String(cliente.id), true), crearCelda(cliente.nombre), email);
+
     return fila;
   }
 
   function renderizarTabla() {
-    const clientes = Libreria.datos.clientes;
     const fragmento = document.createDocumentFragment();
 
     clientes.forEach(function (cliente) {
@@ -34,23 +40,19 @@
     refs.vacio.hidden = clientes.length > 0;
   }
 
-  function renderizarOpcionesVenta() {
-    const valorPrevio = refs.ventaCliente.value;
-    const opciones = Libreria.datos.clientes.map(function (cliente) {
-      return { valor: cliente.id, texto: cliente.nombre };
+  function agregarCliente(cliente) {
+    const existe = clientes.some(function (conocido) {
+      return conocido.id === cliente.id;
     });
 
-    Libreria.utils.poblarSelect(
-      refs.ventaCliente,
-      opciones,
-      'Seleccioná un cliente',
-      valorPrevio
-    );
-  }
-
-  function refrescar() {
-    renderizarTabla();
-    renderizarOpcionesVenta();
+    if (!existe) {
+      clientes.push({
+        id: cliente.id,
+        nombre: cliente.nombre,
+        email: cliente.email
+      });
+      renderizarTabla();
+    }
   }
 
   function leerFormulario() {
@@ -62,40 +64,27 @@
 
   function validarCliente(datos) {
     const errores = {};
-    const nombre = datos.nombre;
-    const email = datos.email;
-    const emailNormalizado = Libreria.utils.normalizarEmail(email);
 
-    if (!nombre) {
+    if (!datos.nombre) {
       errores.nombre = 'Ingresá el nombre completo.';
     }
 
-    if (!email) {
+    if (!datos.email) {
       errores.email = 'Ingresá el email.';
-    } else if (!Libreria.utils.esEmailValido(email)) {
+    } else if (!Libreria.utils.esEmailValido(datos.email)) {
       errores.email = 'Ingresá un email válido.';
-    } else {
-      const repetido = Libreria.datos.clientes.some(function (cliente) {
-        return Libreria.utils.normalizarEmail(cliente.email) === emailNormalizado;
-      });
-
-      if (repetido) {
-        errores.email = 'Ya existe un cliente con ese email.';
-      }
     }
 
     return {
       valido: Object.keys(errores).length === 0,
       errores: errores,
-      valores: {
-        nombre: nombre,
-        email: email
-      }
+      valores: { nombre: datos.nombre, email: datos.email }
     };
   }
 
   function marcarError(clave, mensaje) {
     const error = refs.errores[clave];
+
     error.textContent = mensaje;
     error.hidden = false;
     refs.controles[clave].setAttribute('aria-invalid', 'true');
@@ -103,24 +92,15 @@
 
   function limpiarError(clave) {
     const error = refs.errores[clave];
+
     error.textContent = '';
     error.hidden = true;
     refs.controles[clave].removeAttribute('aria-invalid');
   }
 
   function limpiarErrores() {
-    ORDEN_CAMPOS.forEach(function (clave) {
-      limpiarError(clave);
-    });
-    refs.resumen.hidden = true;
-  }
-
-  function actualizarResumen() {
-    const hayErrores = ORDEN_CAMPOS.some(function (clave) {
-      return !refs.errores[clave].hidden;
-    });
-
-    refs.resumen.hidden = !hayErrores;
+    ORDEN_CAMPOS.forEach(limpiarError);
+    refs.mensaje.hidden = true;
   }
 
   function mostrarErrores(errores) {
@@ -132,8 +112,6 @@
       marcarError(clave, errores[clave]);
     });
 
-    refs.resumen.hidden = false;
-
     if (claves.length > 0) {
       refs.controles[claves[0]].focus();
     }
@@ -143,11 +121,7 @@
     refs.exito.hidden = true;
   }
 
-  function mostrarExito() {
-    refs.exito.hidden = false;
-  }
-
-  function registrarCliente(evento) {
+  async function registrarCliente(evento) {
     evento.preventDefault();
     ocultarExito();
     limpiarErrores();
@@ -159,22 +133,58 @@
       return;
     }
 
-    Libreria.datos.clientes.push({
-      id: Libreria.utils.generarId('c', Libreria.datos.clientes),
-      nombre: resultado.valores.nombre,
-      email: resultado.valores.email
-    });
-    Libreria.store.guardarClientes();
+    refs.registrar.disabled = true;
 
-    refrescar();
-    refs.form.reset();
-    limpiarErrores();
-    mostrarExito();
-    refs.nombre.focus();
+    try {
+      const cliente = await Libreria.api.crearCliente(resultado.valores);
+
+      agregarCliente(cliente);
+      refs.form.reset();
+      limpiarErrores();
+      refs.exito.textContent =
+        'Listo: se registró «' + cliente.nombre + '» con el identificador ' + cliente.id + '.';
+      refs.exito.hidden = false;
+      refs.nombre.focus();
+    } catch (error) {
+      refs.mensaje.textContent = error.mensaje;
+      refs.mensaje.hidden = false;
+    } finally {
+      refs.registrar.disabled = false;
+    }
+  }
+
+  async function consultarCliente() {
+    const texto = refs.consultaId.value.trim();
+    const identificador = Number(texto);
+
+    refs.consultaError.hidden = true;
+    refs.consultaNombre.textContent = '';
+
+    if (!texto || !Number.isInteger(identificador) || identificador < 1) {
+      refs.consultaError.textContent = 'Ingresá un identificador de cliente válido.';
+      refs.consultaError.hidden = false;
+      refs.consultaId.focus();
+      return;
+    }
+
+    refs.consultar.disabled = true;
+
+    try {
+      const cliente = await Libreria.api.obtenerCliente(identificador);
+
+      refs.consultaNombre.textContent = cliente.nombre + ' · ' + cliente.email;
+      agregarCliente(cliente);
+    } catch (error) {
+      refs.consultaError.textContent = error.mensaje;
+      refs.consultaError.hidden = false;
+    } finally {
+      refs.consultar.disabled = false;
+    }
   }
 
   function configurarEventos() {
     refs.form.addEventListener('submit', registrarCliente);
+    refs.consultar.addEventListener('click', consultarCliente);
 
     refs.limpiar.addEventListener('click', function () {
       window.setTimeout(function () {
@@ -188,7 +198,6 @@
 
       function manejarCambio() {
         limpiarError(clave);
-        actualizarResumen();
         ocultarExito();
       }
 
@@ -197,22 +206,27 @@
     });
   }
 
-  function iniciarClientes() {
+  async function iniciarClientes() {
     if (iniciado) {
       return;
     }
 
     iniciado = true;
+    clientes = [];
     refs = {
       form: document.getElementById('form-cliente'),
       nombre: document.getElementById('cliente-nombre'),
       email: document.getElementById('cliente-email'),
       limpiar: document.getElementById('cliente-limpiar'),
-      resumen: document.getElementById('cliente-mensaje'),
+      registrar: document.getElementById('cliente-registrar'),
+      mensaje: document.getElementById('cliente-mensaje'),
       exito: document.getElementById('cliente-exito'),
+      consultaId: document.getElementById('cliente-consulta-id'),
+      consultar: document.getElementById('cliente-consultar'),
+      consultaNombre: document.getElementById('cliente-consulta-nombre'),
+      consultaError: document.getElementById('cliente-consulta-error'),
       cuerpo: document.querySelector('#tabla-clientes tbody'),
       vacio: document.getElementById('clientes-vacio'),
-      ventaCliente: document.getElementById('venta-cliente'),
       errores: {
         nombre: document.getElementById('cliente-nombre-error'),
         email: document.getElementById('cliente-email-error')
@@ -225,13 +239,12 @@
     };
 
     configurarEventos();
-    refrescar();
+    renderizarTabla();
   }
 
   Libreria.clientes = {
     iniciar: iniciarClientes,
-    refrescar: refrescar,
     validarCliente: validarCliente,
-    renderizarTabla: renderizarTabla
+    consultarCliente: consultarCliente
   };
 })();

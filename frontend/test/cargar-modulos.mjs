@@ -74,6 +74,7 @@ export async function cargarModulos(opciones) {
     document: documento,
     location: location,
     fetch: configuracion.fetch,
+    localStorage: configuracion.localStorage,
     console: consola,
     setTimeout: temporizador,
     clearTimeout: clearTimeout,

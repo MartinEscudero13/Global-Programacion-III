@@ -52,6 +52,14 @@ Códigos de error y mensajes:
 
 Los importes llegan como string decimal y se conservan así; sólo se convierten al mostrarse. La fecha de una venta llega en ISO 8601 UTC con sufijo `Z` y se muestra en la zona local.
 
+## Selección de clientes y autores por identificador
+
+La API no expone `GET /clientes/` ni `GET /autores/`: sólo admite la consulta individual. Por eso la interfaz pide el **identificador** y lo verifica antes de usar el recurso:
+
+- En el alta de un libro, `GET /api/autores/{id}` devuelve el nombre; recién entonces se habilita «Agregar autoría» con su rol y su orden.
+- En la vista de clientes, `GET /api/clientes/{id}` muestra nombre y email y suma el cliente a la tabla. Esa tabla lista **los clientes conocidos en la sesión** (los dados de alta o consultados), no un inventario completo, porque no existe un listado en el contrato.
+- En la venta, el cliente se confirma sólo después de consultarlo: el nombre devuelto por la API queda visible y la confirmación exige esa verificación.
+
 ## Cómo actualizar el proyecto
 
 Si ya tenés el repositorio clonado:

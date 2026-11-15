@@ -225,12 +225,23 @@
           </form>
 
           <div class="panel">
-            <h3 class="panel__titulo">Clientes registrados</h3>
+            <h3 class="panel__titulo">Clientes conocidos en la sesión</h3>
+            <div class="formulario__renglon">
+              <div class="campo">
+                <label class="campo__etiqueta" for="cliente-consulta-id">Identificador del cliente</label>
+                <input class="campo__control" id="cliente-consulta-id" name="cliente-id" type="number" min="1" step="1" inputmode="numeric" autocomplete="off">
+                <p class="campo__ayuda">La API no expone el listado de clientes: consultá uno por identificador.</p>
+              </div>
+              <button class="boton boton--secundario" id="cliente-consultar" type="button">Consultar cliente</button>
+            </div>
+            <p class="campo__ayuda" id="cliente-consulta-nombre" role="status"></p>
+            <p class="mensaje mensaje--error" id="cliente-consulta-error" role="alert" hidden>No se pudo consultar el cliente.</p>
             <section class="tabla-contenedor" aria-labelledby="clientes-tabla-titulo" tabindex="0">
               <table class="tabla tabla--angosta" id="tabla-clientes">
-                <caption class="tabla__titulo visualmente-oculto" id="clientes-tabla-titulo">Listado de clientes</caption>
+                <caption class="tabla__titulo visualmente-oculto" id="clientes-tabla-titulo">Clientes conocidos en la sesión</caption>
                 <thead>
                   <tr>
+                    <th scope="col" class="tabla__numero">ID</th>
                     <th scope="col">Nombre completo</th>
                     <th scope="col">Email</th>
                   </tr>
@@ -238,7 +249,7 @@
                 <tbody></tbody>
               </table>
             </section>
-            <p class="mensaje mensaje--vacio" id="clientes-vacio" role="status" hidden>No hay clientes registrados.</p>
+            <p class="mensaje mensaje--vacio" id="clientes-vacio" role="status" hidden>No hay clientes consultados en esta sesión.</p>
           </div>
         </div>
       </section>

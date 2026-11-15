@@ -136,23 +136,23 @@ Estrategia de pruebas: runner integrado de Node (`node --test`) con DOM simulado
 
 ## 5. Clientes
 
-- [ ] 5.1 Agregar al HTML y al fixture la consulta por identificador (`#cliente-consulta-id`, `#cliente-consultar`, `#cliente-consulta-error`, `#cliente-consulta-nombre`) y la columna de identificador en `#tabla-clientes`.
+- [x] 5.1 Agregar al HTML y al fixture la consulta por identificador (`#cliente-consulta-id`, `#cliente-consultar`, `#cliente-consulta-error`, `#cliente-consulta-nombre`) y la columna de identificador en `#tabla-clientes`.
   - RED: agregar ids al HTML sin el fixture; `node --test frontend/test` falla en la guarda.
   - GREEN: completar el fixture; pasa.
   - TRIANGULACIÓN: la tabla tiene tres columnas y el `caption` describe los clientes conocidos en la sesión; pasa.
-- [ ] 5.2 Implementar el alta de cliente con `POST /api/clientes/`: validación local del formato de email, 201 con el cliente devuelto y su incorporación a la lista de la sesión, y 409 con el mensaje del servidor conservando los campos.
+- [x] 5.2 Implementar el alta de cliente con `POST /api/clientes/`: validación local del formato de email, 201 con el cliente devuelto y su incorporación a la lista de la sesión, y 409 con el mensaje del servidor conservando los campos.
   - RED: `frontend/test/clientes.test.mjs` con 201, 409 y email inválido; falla porque valida unicidad local.
   - GREEN: implementar sin comparar emails contra listas locales; pasan.
   - TRIANGULACIÓN: dos altas con emails distintos agregan dos filas con los ids devueltos.
-- [ ] 5.3 Implementar la consulta por identificador: `GET /api/clientes/{id}` muestra nombre y email y agrega el cliente a la lista de la sesión; un 404 muestra el mensaje y no agrega; la vista vacía dice que no hay clientes consultados.
+- [x] 5.3 Implementar la consulta por identificador: `GET /api/clientes/{id}` muestra nombre y email y agrega el cliente a la lista de la sesión; un 404 muestra el mensaje y no agrega; la vista vacía dice que no hay clientes consultados.
   - RED: casos en `clientes.test.mjs` con 200 y 404; fallan.
   - GREEN: implementar; pasan.
   - TRIANGULACIÓN: consultar dos veces el mismo id no duplica la fila.
-- [ ] 5.4 Retirar de `clients.js` la lectura de `Libreria.datos` y la comparación local de email, y verificar que datos viejos en `localStorage` no alteran la vista.
+- [x] 5.4 Retirar de `clients.js` la lectura de `Libreria.datos` y la comparación local de email, y verificar que datos viejos en `localStorage` no alteran la vista.
   - RED: caso en `clientes.test.mjs` que siembra `libreria.v1.clientes` con un valor falso y exige una lista vacía; falla.
   - GREEN: implementar; pasa.
   - TRIANGULACIÓN: el alta y la consulta siguen funcionando con las claves locales sembradas.
-- [ ] 5.5 Documentar en `frontend/README.md` la opción elegida para clientes: consulta individual por identificador porque la API no expone listado, y lista de conocidos en la sesión.
+- [x] 5.5 Documentar en `frontend/README.md` la opción elegida para clientes: consulta individual por identificador porque la API no expone listado, y lista de conocidos en la sesión.
   - Verificación: `Select-String -Path frontend/README.md -Pattern 'clientes'` encuentra la sección con la palabra «identificador» y con la aclaración de que no existe `GET /clientes/`.
 
 ## 6. Ventas

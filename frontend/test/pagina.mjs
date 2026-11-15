@@ -745,7 +745,52 @@ function formularioCliente(documento) {
 
 function tablaClientes(documento) {
   return crear(documento, 'div', { clase: 'panel' }, [
-    crear(documento, 'h3', { clase: 'panel__titulo', texto: 'Clientes registrados' }),
+    crear(documento, 'h3', {
+      clase: 'panel__titulo',
+      texto: 'Clientes conocidos en la sesión'
+    }),
+    crear(documento, 'div', { clase: 'formulario__renglon' }, [
+      crear(documento, 'div', { clase: 'campo' }, [
+        crear(documento, 'label', {
+          clase: 'campo__etiqueta',
+          for: 'cliente-consulta-id',
+          texto: 'Identificador del cliente'
+        }),
+        crear(documento, 'input', {
+          id: 'cliente-consulta-id',
+          clase: 'campo__control',
+          type: 'number',
+          name: 'cliente-id',
+          min: '1',
+          step: '1',
+          inputmode: 'numeric',
+          autocomplete: 'off'
+        }),
+        crear(documento, 'p', {
+          clase: 'campo__ayuda',
+          texto:
+            'La API no expone el listado de clientes: consultá uno por identificador.'
+        })
+      ]),
+      crear(documento, 'button', {
+        id: 'cliente-consultar',
+        clase: 'boton boton--secundario',
+        type: 'button',
+        texto: 'Consultar cliente'
+      })
+    ]),
+    crear(documento, 'p', {
+      id: 'cliente-consulta-nombre',
+      clase: 'campo__ayuda',
+      role: 'status'
+    }),
+    crear(documento, 'p', {
+      id: 'cliente-consulta-error',
+      clase: 'mensaje mensaje--error',
+      role: 'alert',
+      texto: 'No se pudo consultar el cliente.',
+      hidden: true
+    }),
     crear(
       documento,
       'section',
@@ -755,10 +800,11 @@ function tablaClientes(documento) {
           crear(documento, 'caption', {
             id: 'clientes-tabla-titulo',
             clase: 'tabla__titulo visualmente-oculto',
-            texto: 'Listado de clientes'
+            texto: 'Clientes conocidos en la sesión'
           }),
           crear(documento, 'thead', {}, [
             crear(documento, 'tr', {}, [
+              crear(documento, 'th', { scope: 'col', clase: 'tabla__numero', texto: 'ID' }),
               crear(documento, 'th', { scope: 'col', texto: 'Nombre completo' }),
               crear(documento, 'th', { scope: 'col', texto: 'Email' })
             ])
@@ -771,7 +817,7 @@ function tablaClientes(documento) {
       id: 'clientes-vacio',
       clase: 'mensaje mensaje--vacio',
       role: 'status',
-      texto: 'No hay clientes registrados.',
+      texto: 'No hay clientes consultados en esta sesión.',
       hidden: true
     })
   ]);
