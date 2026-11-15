@@ -318,7 +318,10 @@ Los datos no se pierden: viven en `libreria-zoriontech-db` (volumen
 
 Rollback: `docker rm -f libreria-zoriontech` deja el servicio abajo pero **no
 toca la base**; para volver a la versión anterior se reconstruye el commit
-previo y se repite el mismo `docker run` (no hay migraciones que revertir).
+previo y se repite el mismo `docker run`. El esquema no cambia al reconstruir la
+imagen: la migración aplicada sigue registrada en `alembic_version` y un
+`alembic upgrade head` sobre el commit anterior no encuentra operaciones
+pendientes. Nunca se hace `DROP` por cuenta propia.
 
 ## Verificación en el VPS y evidencia
 
@@ -407,19 +410,56 @@ también queda registrado por `scripts/verificar_despliegue.sh`
     imagen de 264 MB (1 CPU, Alpine resolvió wheels musllinux).
   - `create_all` sobre la base vacía creó el esquema en el primer arranque; el
     seed se ejecutó con `docker exec libreria-zoriontech python -m app.seed`.
+    (Etapa anterior: hoy el esquema lo versiona Alembic; ver «Migraciones con
+    Alembic».)
 
-## Limitación de `create_all` (DD-06)
+## Migraciones con Alembic
 
-Al arrancar, el `lifespan` ejecuta `SQLModel.metadata.create_all`. Eso **crea
-las tablas faltantes y no altera las existentes**: no hay migraciones, no hay
-`ALTER TABLE` automático y no se borra nada. Consecuencias:
+El esquema está versionado en `migrations/` y lo aplica la imagen antes de
+arrancar Uvicorn:
 
-- Una base vacía queda lista con el esquema completo en el primer arranque.
-- Un cambio de esquema en el código **no** se aplica solo: exige recrear la base
-  o ejecutar el `ALTER` a mano.
-- Si la base asignada ya tiene tablas con otro esquema, `create_all` no las
-  corrige; hay que pedir una base limpia a la cátedra. Nunca se hace `DROP` por
-  cuenta propia.
+```bash
+CMD alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+`alembic upgrade head` lee la misma `DATABASE_URL` que la API
+(`migrations/env.py` usa `get_settings()`), así que no hay una segunda
+configuración ni una URL escrita en el repositorio. La revisión inicial
+`0001_esquema_inicial` reproduce las nueve tablas con sus `UNIQUE`, `CHECK`,
+claves foráneas e índices.
+
+- Si la migración falla, el `&&` corta la cadena: Uvicorn no arranca, el
+  contenedor queda en error y la causa aparece en `docker logs`.
+- Un cambio de esquema se agrega como una revisión nueva y se aplica con el
+  mismo arranque del contenedor.
+- `alembic check` informa si el modelo y las migraciones se separaron.
+
+### Base creada sin Alembic: adopción con `stamp head`
+
+La base de la etapa anterior se creó con `create_all`: su esquema coincide con
+la revisión inicial pero no tiene tabla `alembic_version`. Antes del primer
+arranque de la imagen nueva hay que adoptarla, sin borrar ni recrear datos:
+
+```bash
+docker run --rm --env-file /root/libreria-zoriontech.env \
+  libreria-zoriontech alembic stamp head
+```
+
+Comprobá primero que la base tenga las nueve tablas. Después del `stamp`,
+`alembic upgrade head` es un no-op y el arranque automático del contenedor
+queda en el mismo estado. Si el esquema de la base no coincide con la revisión
+inicial, no se ejecuta `stamp`: se escala antes de tocar datos.
+
+### Orden de actualización
+
+1. Si la base ya existe: `alembic stamp head` una sola vez, sobre la imagen
+   nueva y con el `CMD` sobrescrito como en el comando anterior.
+2. `docker rm -f libreria-zoriontech` y el `docker run` de «Actualización».
+3. El arranque aplica `alembic upgrade head`; si no hay cambios, arranca.
+4. Si la base es nueva, el `stamp` no se ejecuta: el `upgrade head` del `CMD`
+   alcanza.
+5. Escalar a más de una réplica exigiría migrar fuera del `CMD`: dos
+   contenedores podrían migrar a la vez.
 
 ## Evidencia
 

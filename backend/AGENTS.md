@@ -21,7 +21,7 @@ API REST asincrónica de catálogo y ventas para una librería de barrio (Parcia
 | Servidor ASGI | uvicorn | la que instala `fastapi[standard]` | Servir la app (`app.main:app`) |
 | Contenedor | Docker | 20.10 | Construir la imagen y correr el contenedor en local y en el VPS |
 
-Sin frontend, auth, Redis, colas, migraciones ni Docker Compose. Detalle completo: [knowledge-base/02_descripcion_general.md](knowledge-base/02_descripcion_general.md)
+Sin frontend, auth, Redis ni colas. El esquema se versiona con Alembic. Sin Docker Compose. Detalle completo: [knowledge-base/02_descripcion_general.md](knowledge-base/02_descripcion_general.md)
 
 ---
 
@@ -126,7 +126,7 @@ Son contrato: romperlas es un defecto.
 1. NUNCA `float` para dinero → `Numeric(10,2)` en DB, `Decimal` en Python, string decimal (`"25000.00"`) al serializar.
 2. NUNCA renombrar ni quitar tablas/columnas → nombres obligatorios, solo se agregan columnas.
 3. NUNCA carga perezosa → toda relación leída se precarga (`joinedload`/`selectinload`) en la misma consulta.
-4. NUNCA Alembic ni migraciones → esquema con `SQLModel.metadata.create_all` en el `lifespan`.
+4. Alembic es la única fuente del esquema: `alembic upgrade head` antes de arrancar la API y antes del seed. `SQLModel.metadata.create_all` prohibido en `app/main.py` y `app/seed.py`; sólo se admite en las fixtures de test.
 
 ### B. API y errores
 
