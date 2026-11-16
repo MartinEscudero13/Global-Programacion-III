@@ -22,7 +22,7 @@ El paquete SHALL contener `frontend/` y `backend/` directamente en la raíz del 
 #### Scenario: Backend entregable completo
 
 - **WHEN** se recorren las entradas de `backend/` en el paquete
-- **THEN** incluye `app/`, `alembic.ini`, `migrations/`, `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`, `env.example`, `Dockerfile`, `.dockerignore`, `.gitignore`, `README.md` y `test/`
+- **THEN** incluye `app/`, `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`, `env.example`, `Dockerfile`, `.dockerignore`, `.gitignore`, `README.md` y `test/`
 
 ### Requirement: Tooling fuera del paquete
 
