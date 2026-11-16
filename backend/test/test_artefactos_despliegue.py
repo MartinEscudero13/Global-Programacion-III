@@ -178,9 +178,9 @@ def test_deploy_no_deja_los_datos_del_vps_como_pendientes() -> None:
 
 def test_readme_enlaza_el_documento_de_despliegue() -> None:
     texto = _leer(README)
-    assert "[DEPLOY.md](DEPLOY.md)" in texto
-    assert "http://46.202.151.202:8000" in texto
-    assert "libreria-zoriontech" in texto
+    assert "[DEPLOY.md](../../DEPLOY.md)" in texto
+    assert "https://libreria.zoriontech.me" in texto
+    assert "zoriontech-crm" in texto
     assert "<IP_VPS>" not in texto and "<PUERTO_PUBLICO>" not in texto
     for url in _urls_bd(texto):
         assert url.startswith(URL_EJEMPLO)

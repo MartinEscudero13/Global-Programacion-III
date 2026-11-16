@@ -10,7 +10,7 @@ de Programación III.
 |---|---|
 | Grupo | **ZorionTech** |
 | Integrantes | **Lautaro Naranjo** y **Martin Escudero** |
-| URL pública | **`http://46.202.151.202:8000`** |
+| URL pública del Global | **`https://libreria.zoriontech.me`** (la API se consume por `/api`) |
 
 ## Requisitos
 
@@ -95,8 +95,11 @@ En Linux/macOS o dentro del contenedor:
 
 ```bash
 .venv/bin/python -m app.seed
-docker exec libreria-zoriontech python -m app.seed
+docker exec <contenedor-del-backend> python -m app.seed
 ```
+
+El seed crea el esquema si falta (`SQLModel.metadata.create_all`), así que
+funciona sobre una base recién creada sin pasos previos.
 
 - Usa `DATABASE_URL` del entorno o del archivo `.env`. Si falta, termina con
   código 2 y un mensaje que nombra la variable.
@@ -126,8 +129,9 @@ Se ejecutan con **VS Code REST Client** o **JetBrains HTTP Client**:
 2. Abrí el `.http` y ejecutá cada bloque con la acción del cliente
    (*Send Request* / ▶).
 3. La variable `@base` al inicio del archivo apunta a
-   `http://localhost:8000`. Para probar la URL pública, cambiala a
-   `http://46.202.151.202:8000`.
+   `http://localhost:8000`. Contra el despliegue del Global, usá
+   `https://libreria.zoriontech.me/api` y agregá la barra final de cada colección
+   (`/libros/`, `/ventas/`).
 
 No hace falta editar el resto del archivo: los datos del seed son
 deterministas y los bloques crear → duplicado están en orden.
@@ -150,18 +154,20 @@ $env:DATABASE_URL = "postgresql+asyncpg://usuario:password@127.0.0.1:5432/librer
 
 ## Despliegue
 
-La API está en línea en **`http://46.202.151.202:8000`**, en el contenedor
-`libreria-zoriontech`, con la base en el contenedor
-`libreria-zoriontech-db` (PostgreSQL 16) y las variables en
-`/root/libreria-zoriontech.env`, fuera del repositorio.
+El Global se despliega con **Easypanel** sobre la VPS de la cátedra, en el
+proyecto `zoriontech-crm`, con tres servicios: `libreria-db` (PostgreSQL),
+`libreria-backend` (esta API) y `libreria-frontend` (Nginx con la web).
 
-El procedimiento completo —build en el servidor, archivo de variables,
-transferencia, verificación, seed dentro del contenedor y actualización— está
-en [DEPLOY.md](DEPLOY.md). El seed se ejecuta dentro del contenedor:
+La API **no tiene dominio público**: sólo se alcanza por la red interna
+(`zoriontech-crm_libreria-backend:8000`) y el frontend la expone por `/api`. Los
+datos ficticios se cargan desde la consola del panel:
 
 ```bash
-docker exec libreria-zoriontech python -m app.seed
+python -m app.seed
 ```
+
+El procedimiento completo —URL pública, build paths, variables, esquema y
+actualización— está en [DEPLOY.md](../../DEPLOY.md), en la raíz del repositorio.
 
 ## Estructura del proyecto
 
@@ -174,8 +180,6 @@ docker exec libreria-zoriontech python -m app.seed
 │   └── modules/             # editoriales, géneros, autores, libros,
 │                            # clientes, ventas y health
 ├── test/                    # suite pytest + casos .http
-├── evidencia/               # C-07 y D-01…D-07
-├── scripts/                 # despliegue y verificación en el VPS
 ├── env.example              # plantilla de variables, sin valores reales
 ├── requirements.txt         # dependencias de runtime
 ├── requirements-dev.txt     # pytest, pytest-asyncio y httpx
