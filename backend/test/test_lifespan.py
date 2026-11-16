@@ -1,13 +1,6 @@
-"""Pruebas del arranque y apagado de la aplicación (D-07).
-
-El esquema lo aplica Alembic antes de arrancar; el ``lifespan`` sólo construye
-el motor y la fábrica de sesiones, así que ninguna prueba de este módulo espera
-DDL en el arranque.
-"""
+"""Pruebas del arranque y apagado de la aplicación (D-07)."""
 
 import pytest
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 from app.core.config import ConfigurationError
@@ -104,41 +97,14 @@ async def test_lifespan_libera_el_motor_al_apagar(monkeypatch):
     assert motor.dispose_invocado is True
 
 
-async def test_lifespan_no_abre_transaccion_ni_ejecuta_ddl(monkeypatch):
-    """Alembic es la única fuente del esquema: el arranque no define DDL."""
+async def test_lifespan_crea_el_esquema_en_una_transaccion_del_motor(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", URL)
     motor = _MotorFalso()
     _sustituir_motor(monkeypatch, motor, object())
     aplicacion = create_app()
 
     async with aplicacion.router.lifespan_context(aplicacion):
-        assert motor.veces_que_abrio_transaccion == 0
+        pass
 
-    assert motor.veces_que_abrio_transaccion == 0
-    assert motor.conexion.ejecutadas == []
-    assert motor.dispose_invocado is True
-
-
-@pytest.mark.integration
-async def test_arranque_sobre_base_sin_migrar_no_crea_tablas(url_bd_test, monkeypatch):
-    """Triangulación real: contra PostgreSQL vacío, arrancar no crea tablas."""
-    motor_verificacion = create_async_engine(url_bd_test)
-    try:
-        async with motor_verificacion.begin() as conexion:
-            await conexion.run_sync(SQLModel.metadata.drop_all)
-
-        monkeypatch.setenv("DATABASE_URL", url_bd_test)
-        aplicacion = create_app()
-        async with aplicacion.router.lifespan_context(aplicacion):
-            pass
-
-        async with motor_verificacion.connect() as conexion:
-            resultado = await conexion.execute(
-                text(
-                    "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' "
-                    "AND tablename <> 'alembic_version'"
-                )
-            )
-            assert resultado.scalar_one() == 0
-    finally:
-        await motor_verificacion.dispose()
+    assert motor.veces_que_abrio_transaccion == 1
+    assert motor.conexion.ejecutadas == [SQLModel.metadata.create_all]

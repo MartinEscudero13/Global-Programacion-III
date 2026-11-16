@@ -62,36 +62,26 @@ En Linux/macOS: `cp env.example .env`.
 
 ## Arranque
 
-El esquema está versionado con Alembic (`alembic.ini` y `migrations/`). Aplicá
-las migraciones **antes** de arrancar la API y **antes** de cargar los datos
-iniciales; sobre una base nueva, `alembic upgrade head` crea las nueve tablas.
-
 Windows (PowerShell):
 
 ```powershell
-.venv\Scripts\alembic.exe upgrade head
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
 Linux/macOS:
 
 ```bash
-.venv/bin/alembic upgrade head
 .venv/bin/python -m uvicorn app.main:app --reload
 ```
 
 La API queda en `http://127.0.0.1:8000` y la documentación interactiva en
 `http://127.0.0.1:8000/docs`.
 
-Al arrancar, el `lifespan` crea el motor asincrónico y publica el motor y la
-fábrica de sesiones en `app.state`. **No ejecuta DDL**: el esquema lo aplica
-Alembic con la misma `DATABASE_URL` de la API (`migrations/env.py` usa
-`get_settings()`). Un cambio de esquema se agrega como una revisión nueva en
-`migrations/versions/`, se aplica con `alembic upgrade head` y su equivalencia
-con el modelo se comprueba con `alembic check`.
-
-Si la base ya existe y se creó sin Alembic, se adopta una sola vez con
-`alembic stamp head` antes de migrar (ver `DEPLOY.md`).
+Al arrancar, el `lifespan` crea el motor asincrónico, publica el motor y la
+fábrica de sesiones en `app.state` y ejecuta `SQLModel.metadata.create_all`.
+**No hay migraciones**: `create_all` crea las tablas faltantes y **no altera
+las existentes**; un cambio de esquema exige recrear la base o aplicar un
+`ALTER` manual (decisión DD-06).
 
 ## Datos iniciales (seed)
 
@@ -217,5 +207,5 @@ docker exec libreria-zoriontech python -m app.seed
   defecto 0).
 - Los errores de unicidad y de clave foránea devuelven **409** con un mensaje
   propio; nunca exponen texto de PostgreSQL, nombres de constraints ni trazas.
-- No hay `DELETE` en los recursos del catálogo: el esquema lo versiona Alembic
-  (`alembic upgrade head`) y el catálogo se carga con el seed.
+- No hay migraciones ni `DELETE` en los recursos del catálogo: el esquema se
+  crea con `create_all` y se carga con el seed.

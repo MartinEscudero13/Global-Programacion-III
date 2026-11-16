@@ -19,15 +19,9 @@ DOCKERIGNORE = RAIZ / ".dockerignore"
 GITIGNORE = RAIZ / ".gitignore"
 DEPLOY = RAIZ / "DEPLOY.md"
 
-MOTIVO_ETAPA_ANTERIOR = (
-    "artefacto de la etapa anterior del parcial: no viaja en el paquete de "
-    "entrega del Global"
-)
-
 
 def _leer(ruta: Path) -> str:
-    if not ruta.is_file():
-        pytest.skip(f"falta {ruta.name}: {MOTIVO_ETAPA_ANTERIOR}")
+    assert ruta.is_file(), f"falta el artefacto {ruta.name}"
     return ruta.read_text(encoding="utf-8")
 
 
@@ -77,35 +71,15 @@ def test_dockerfile_usa_usuario_sin_privilegios() -> None:
     assert texto.index("RUN adduser") < texto.index("USER appuser")
 
 
-def test_dockerfile_expone_8000_y_arranca_uvicorn_tras_migrar() -> None:
+def test_dockerfile_expone_8000_y_arranca_uvicorn_en_todas_las_interfaces() -> None:
     texto = _leer(DOCKERFILE)
     assert "EXPOSE 8000" in texto
 
     cmd = [linea for linea in _instrucciones(texto) if linea.startswith("CMD")]
     assert len(cmd) == 1, "debe haber una sola instrucción CMD"
-    assert cmd[0].startswith("CMD alembic upgrade head && "), (
-        "la imagen debe aplicar la migración antes de arrancar"
-    )
-    assert "exec uvicorn app.main:app" in cmd[0], (
-        "exec deja a Uvicorn como PID 1 para recibir SIGTERM"
-    )
-    assert "--host 0.0.0.0" in cmd[0]
-    assert "--port 8000" in cmd[0]
-
-
-def test_dockerfile_copia_las_migraciones_antes_de_cambiar_de_usuario() -> None:
-    texto = _leer(DOCKERFILE)
-    instrucciones = _instrucciones(texto)
-
-    copia_app = _posicion(instrucciones, "COPY app ./app")
-    copia_ini = _posicion(instrucciones, "COPY alembic.ini ./alembic.ini")
-    copia_migraciones = _posicion(instrucciones, "COPY migrations ./migrations")
-
-    assert copia_app < copia_ini, "alembic.ini se copia después del código"
-    assert copia_app < copia_migraciones, "migrations/ se copia después del código"
-    assert texto.index("COPY migrations ./migrations") < texto.index("USER appuser"), (
-        "las migraciones deben quedar legibles para appuser"
-    )
+    assert '"app.main:app"' in cmd[0]
+    assert '"--host", "0.0.0.0"' in cmd[0]
+    assert '"--port", "8000"' in cmd[0]
 
 
 def test_dockerfile_tiene_un_solo_healthcheck_contra_ready_en_ipv4() -> None:

@@ -45,19 +45,9 @@ VARIABLES_DESPLIEGUE = [
 
 URL_EJEMPLO = "postgresql+asyncpg://usuario:password@"
 
-MOTIVO_ETAPA_ANTERIOR = (
-    "artefacto de la etapa anterior del parcial: no viaja en el paquete de "
-    "entrega del Global"
-)
-
-
-def _requiere(ruta: Path) -> None:
-    if not ruta.is_file():
-        pytest.skip(f"falta {ruta.name}: {MOTIVO_ETAPA_ANTERIOR}")
-
 
 def _leer(ruta: Path) -> str:
-    _requiere(ruta)
+    assert ruta.is_file(), f"falta el artefacto {ruta.name}"
     return ruta.read_text(encoding="utf-8")
 
 
@@ -128,13 +118,11 @@ def test_deploy_deja_claro_el_orden_d03_d07_d04() -> None:
     assert "borra los logs" in texto.lower() or "reiniciar antes" in texto.lower()
 
 
-def test_deploy_documenta_las_migraciones_con_alembic() -> None:
+def test_deploy_documenta_la_limitacion_de_create_all() -> None:
     texto = _leer(DEPLOY)
-    assert "Migraciones con Alembic" in texto
-    assert "alembic upgrade head" in texto
-    assert "alembic stamp head" in texto
-    assert "Limitación de `create_all`" not in texto
-    assert "no hay migraciones" not in texto.lower()
+    assert "create_all" in texto
+    assert "DD-06" in texto
+    assert "no altera" in texto.lower()
 
 
 def test_deploy_menciona_la_regeneracion_de_evidencia_con_el_script() -> None:
@@ -204,7 +192,6 @@ def test_script_existe_y_tiene_cabecera_bash(script: Path) -> None:
 
 @pytest.mark.parametrize("script", SCRIPTS_BASH, ids=lambda ruta: ruta.name)
 def test_script_usa_finales_de_linea_lf(script: Path) -> None:
-    _requiere(script)
     crudo = script.read_bytes()
     assert b"\r\n" not in crudo, f"{script.name} tiene CRLF; debe quedar en LF"
 

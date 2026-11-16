@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from sqlmodel import SQLModel
 
 from app.core.config import get_settings
 from app.core.database import build_engine, build_session_factory
@@ -17,10 +18,8 @@ from app.modules.libros.router import router as libros_router
 from app.modules.ventas.router import router as ventas_router
 
 # Las nueve tablas del dominio viven en `app/modules/*/models.py`. Los imports
-# se conservan porque completan el registro de clases que SQLAlchemy necesita
-# para resolver las relaciones declaradas por cadena; el esquema lo crea y lo
-# cambia Alembic (`alembic upgrade head`), nunca este módulo. `health` no define
-# tablas.
+# deben ejecutarse antes de `SQLModel.metadata.create_all` para que el esquema
+# se cree completo en el `lifespan` (D-05); `health` no define tablas.
 from app.modules.autores import models as _autores_models  # noqa: F401
 from app.modules.clientes import models as _clientes_models  # noqa: F401
 from app.modules.editoriales import models as _editoriales_models  # noqa: F401
@@ -31,15 +30,14 @@ from app.modules.ventas import models as _ventas_models  # noqa: F401
 
 @asynccontextmanager
 async def lifespan(aplicacion: FastAPI) -> AsyncIterator[None]:
-    """Crea el motor y la fábrica al arrancar y libera el motor al apagar.
-
-    No abre transacciones ni ejecuta DDL: el esquema llega migrado por Alembic.
-    """
+    """Crea el motor y la fábrica al arrancar y libera el motor al apagar."""
     settings = get_settings()
     engine = build_engine(settings)
     aplicacion.state.engine = engine
     aplicacion.state.session_factory = build_session_factory(engine)
     try:
+        async with engine.begin() as conexion:
+            await conexion.run_sync(SQLModel.metadata.create_all)
         yield
     finally:
         await engine.dispose()

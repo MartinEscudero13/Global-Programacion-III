@@ -34,10 +34,8 @@ frontend/
 └── test/                    runner node --test (no viaja en el paquete)
 backend/
 ├── app/                     FastAPI por módulos (libros, clientes, ventas, ...)
-├── migrations/              Alembic
 ├── test/                    pytest
 ├── Dockerfile
-├── alembic.ini
 ├── env.example
 └── requirements.txt
 evidencia/                   casos G-01 a G-07 con su salida real
@@ -63,12 +61,12 @@ cd backend
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt        # Linux/macOS: .venv/bin/pip
 export DATABASE_URL="postgresql+asyncpg://postgres:libreria@127.0.0.1:5433/libreria"
-.venv/Scripts/alembic upgrade head
 .venv/Scripts/python -m app.seed
 .venv/Scripts/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-El esquema lo crea **Alembic**; el seed sólo inserta datos y es idempotente.
+El esquema lo crea la API con `SQLModel.metadata.create_all` al arrancar, y el
+seed también lo crea si falta: es idempotente y no borra datos.
 
 **3. Frontend**
 

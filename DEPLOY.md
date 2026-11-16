@@ -62,18 +62,21 @@ Se cargan en el panel, nunca en el repositorio.
 `backend/env.example` documenta los nombres y una URL de muestra. La clave real
 vive en `/root/libreria-global.env` de la VPS (permisos `600`, dueño `root`).
 
-## Migraciones
+## Esquema
 
-El `CMD` del backend aplica el esquema antes de arrancar:
+La API crea el esquema al arrancar con `SQLModel.metadata.create_all`, dentro del
+`lifespan`, y el `CMD` del contenedor sólo levanta Uvicorn:
 
 ```
-alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-Los logs del despliegue muestran `Running upgrade -> 0001_esquema_inicial`. Si
-alguna vez se reutiliza una base creada sin Alembic, hay que adoptarla una vez
-con `alembic stamp head` antes de arrancar la imagen nueva; si no, `upgrade head`
-falla con «already exists» sin perder datos.
+Los logs del despliegue muestran el arranque de Uvicorn sin ningún paso de
+migración. `create_all` crea las tablas que faltan y **no altera las
+existentes**: sobre la base actual no cambia nada, y un cambio de modelos exige
+recrear la base o aplicar el `ALTER TABLE` a mano. El seed también crea el
+esquema si falta, así que la carga inicial funciona sobre una base recién
+creada.
 
 ## Carga inicial de datos
 
@@ -93,7 +96,7 @@ Imprime los conteos por tabla. Es idempotente: no duplica ni pisa datos.
    dejarlo corriendo si ya está).
 3. `libreria-backend`: Build Path `/backend`, builder **Dockerfile** ruta
    `Dockerfile`, variable `DATABASE_URL`. **Deploy** y revisar los logs hasta ver
-   la migración y `Uvicorn running`.
+   `Uvicorn running`; el esquema se crea en ese arranque.
 4. Healthcheck interno:
    ```bash
    URL=http://127.0.0.1:8000/health/ready
@@ -116,7 +119,8 @@ Imprime los conteos por tabla. Es idempotente: no duplica ni pisa datos.
 
 1. Push a `main`.
 2. **Deploy** del servicio que cambió (sólo el frontend si no hay cambios de API).
-3. Si hubo cambios de esquema, `alembic upgrade head` corre solo al arrancar.
+3. Si hubo cambios de modelos, `create_all` crea sólo las tablas nuevas: los
+   cambios sobre tablas existentes se aplican a mano o recreando la base.
 4. Repetir G-04 y comprobar que las ventas anteriores conservan sus importes.
 
 Easypanel conserva el volumen de Postgres entre redespliegues: los datos siguen
@@ -128,7 +132,7 @@ disponibles, como se verificó en `evidencia/G-07-despliegue.txt`.
 |---|---|
 | Falla un `COPY` | El Build Path del servicio y que `public/` exista en `frontend/`. |
 | `/api/` devuelve 502 | Logs del frontend, `API_UPSTREAM`, que el backend esté `1/1`. |
-| `/api/health/ready` falla | Logs del backend, `DATABASE_URL`, que `libreria-db` esté corriendo y el estado de las migraciones. |
+| `/api/health/ready` falla | Logs del backend, `DATABASE_URL`, que `libreria-db` esté corriendo y que el esquema se haya creado en el arranque. |
 | Una ruta de la API devuelve 404 | El prefijo `/api` y la barra final de las rutas de colección (`/api/libros/`, `/api/ventas/`). |
 | El certificado no se emite | Que el DNS del dominio apunte a la VPS y el dominio esté asociado al servicio frontend. |
 
@@ -137,7 +141,7 @@ disponibles, como se verificó en `evidencia/G-07-despliegue.txt`.
 | Caso | Archivo |
 |---|---|
 | G-01 a G-06 (interfaz y API pública) | `evidencia/G-casos-publicos.txt` |
-| G-07 (HTTPS, salud, migraciones, redespliegue) | `evidencia/G-07-despliegue.txt` |
-| Imagen del frontend y migraciones en local | `evidencia/E4-imagen-frontend.txt`, `evidencia/E4-alembic.txt` |
+| G-07 (HTTPS, salud, redespliegue) | `evidencia/G-07-despliegue.txt` |
+| Imagen del frontend y creación del esquema en local | `evidencia/E4-imagen-frontend.txt`, `evidencia/esquema-create-all.txt` |
 
 Las capturas y salidas no incluyen contraseñas ni valores privados.
