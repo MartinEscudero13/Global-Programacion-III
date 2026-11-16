@@ -198,6 +198,9 @@ def test_script_existe_y_tiene_cabecera_bash(script: Path) -> None:
 
 @pytest.mark.parametrize("script", SCRIPTS_BASH, ids=lambda ruta: ruta.name)
 def test_script_usa_finales_de_linea_lf(script: Path) -> None:
+    if not script.is_file():
+        pytest.skip(f"falta {script.name}: {MOTIVO_ETAPA_ANTERIOR}")
+
     crudo = script.read_bytes()
     assert b"\r\n" not in crudo, f"{script.name} tiene CRLF; debe quedar en LF"
 
