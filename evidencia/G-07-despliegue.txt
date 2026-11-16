@@ -39,16 +39,21 @@ Comprobaciones con curl desde fuera de la VPS:
   https://libreria.zoriontech.me/js/data.js         → 404 (ya no existe en esta versión)
 
 ================================================================================
-3. Migraciones al arrancar
+3. Esquema al arrancar
 ================================================================================
-El contenedor del backend aplica el esquema antes de levantar Uvicorn. Logs del
-primer arranque:
+El esquema lo crea la API con SQLModel.metadata.create_all en el lifespan; el
+CMD del contenedor sólo levanta Uvicorn. Logs del arranque tras el redespliegue
+del 16/11/2026:
 
-  INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-  INFO  [alembic.runtime.migration] Will assume transactional DDL.
-  INFO  [alembic.runtime.migration] Running upgrade  -> 0001_esquema_inicial,
-        Esquema inicial: las nueve tablas del dominio (0001).
+  INFO:     Started server process [1]
+  INFO:     Waiting for application startup.
+  INFO:     Application startup complete.
   INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+En esa misma fecha se quitó la tabla alembic_version de la base desplegada, que
+quedaba sin uso al no existir migraciones. Las nueve tablas del dominio siguen
+intactas (autor, cliente, editorial, genero, libro, libro_autor, perfil_cliente,
+renglon_venta, venta).
 
 Carga inicial de datos ficticios, ejecutada desde el panel:
 
@@ -65,7 +70,7 @@ después:
   deploy:  HTTP 200
   después: libros 5 (ids 1-5)   ventas 2 (ids 2,3)
   health:  200 {"estado":"listo","base":"ok"}
-  logs:    alembic sin upgrade pendiente; uvicorn escuchando en 0.0.0.0:8000
+  logs:    arranque de Uvicorn sin pasos de migración; create_all no alteró nada
 
 Los datos viven en el volumen del servicio Postgres, no en el contenedor de la
 API.

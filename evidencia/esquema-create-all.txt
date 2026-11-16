@@ -1,0 +1,130 @@
+ESQUEMA CON create_all · EJERCICIO 4 DEL GLOBAL
+Global de Programación III · Grupo ZorionTech
+Fecha de ejecución: 16/11/2026
+Motivo: indicación del profesor de crear el esquema con SQLModel.metadata.create_all
+y no usar Alembic.
+
+Entorno de la prueba: la VPS del despliegue (Docker 29.7.1). Se usó la imagen
+real del backend publicada por Easypanel:
+easypanel/zoriontech-crm/libreria-backend:latest
+
+Método: se levantó un PostgreSQL 18 vacío en una red propia, se ejecutó la
+imagen del backend contra esa base y se contaron las tablas antes y después. Al
+terminar se eliminaron los contenedores y la red de prueba.
+
+================================================================================
+1. Base vacía antes de arrancar la API
+================================================================================
+COMANDO:
+  docker exec prueba-esquema-db psql -U postgres -d prueba \
+    -tAc "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
+
+SALIDA REAL:
+  0
+
+================================================================================
+2. Carga inicial sobre la base vacía
+================================================================================
+COMANDO:
+  docker run --rm --network prueba-esquema-net \
+    -e DATABASE_URL=postgresql+asyncpg://postgres:***@prueba-esquema-db:5432/prueba \
+    easypanel/zoriontech-crm/libreria-backend:latest python -m app.seed
+
+SALIDA REAL:
+  Seed aplicado: editorial=1 genero=1 autor=4 libro=4 libro_autor=5 cliente=2 perfil_cliente=0 venta=1 renglon_venta=2
+
+El seed crea el esquema cuando falta y después inserta los datos ficticios.
+
+================================================================================
+3. Tablas creadas por create_all
+================================================================================
+COMANDO:
+  docker exec prueba-esquema-db psql -U postgres -d prueba \
+    -tAc "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
+
+SALIDA REAL:
+  9
+
+COMANDO:
+  docker exec prueba-esquema-db psql -U postgres -d prueba \
+    -tAc "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename;"
+
+SALIDA REAL:
+  autor
+  cliente
+  editorial
+  genero
+  libro
+  libro_autor
+  perfil_cliente
+  renglon_venta
+  venta
+
+No aparece ninguna tabla de control de migraciones.
+
+COMANDO:
+  docker exec prueba-esquema-db psql -U postgres -d prueba \
+    -tAc "SELECT (SELECT count(*) FROM libro) libros, (SELECT count(*) FROM cliente) clientes, (SELECT count(*) FROM venta) ventas;"
+
+SALIDA REAL:
+  4|2|1
+
+================================================================================
+4. Segunda ejecución del seed (idempotencia)
+================================================================================
+COMANDO: el mismo del punto 2.
+
+SALIDA REAL:
+  Seed aplicado: editorial=1 genero=1 autor=4 libro=4 libro_autor=5 cliente=2 perfil_cliente=0 venta=1 renglon_venta=2
+
+Los conteos no cambian entre la primera y la segunda ejecución: no duplica ni
+pisa datos.
+
+================================================================================
+5. API contra la base recién creada
+================================================================================
+COMANDO:
+  docker run -d --name prueba-esquema-api --network prueba-esquema-net \
+    -e DATABASE_URL=postgresql+asyncpg://postgres:***@prueba-esquema-db:5432/prueba \
+    easypanel/zoriontech-crm/libreria-backend:latest
+  docker exec prueba-esquema-api wget -qO- http://127.0.0.1:8000/health/ready
+
+SALIDA REAL:
+  {"estado":"listo","base":"ok"}
+
+COMANDO:
+  docker exec prueba-esquema-api wget -qO- 'http://127.0.0.1:8000/libros/?limit=2'
+
+SALIDA REAL:
+  [{"id":1,"isbn":"978-950-00-0001-1","titulo":"Rayuela","precio":"25000.00","stock":10,...}]
+
+Comando y salida del arranque:
+  docker logs prueba-esquema-api
+
+  INFO:     Waiting for application startup.
+  INFO:     Application startup complete.
+  INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
+Ninguna línea menciona Alembic ni una migración: el esquema se crea en el
+lifespan y Uvicorn arranca directamente.
+
+================================================================================
+6. Imagen sin herramientas de migración
+================================================================================
+COMANDO (sobre el contenedor desplegado):
+  docker exec <contenedor> python -c "import importlib.util; print(importlib.util.find_spec('alembic') is not None)"
+  docker exec <contenedor> ls /app/alembic.ini /app/migrations
+
+SALIDA REAL:
+  False
+  ls: /app/alembic.ini: No such file or directory
+  ls: /app/migrations: No such file or directory
+
+================================================================================
+7. Limpieza
+================================================================================
+  docker rm -f prueba-esquema-api prueba-esquema-db
+  docker network rm prueba-esquema-net
+  contenedores de prueba eliminados
+
+ESTADO: VERIFICADO (16/11/2026)

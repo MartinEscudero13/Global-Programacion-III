@@ -167,13 +167,12 @@ SALIDA REAL:
 nginx version: nginx/1.30.6
 
 ================================================================================
-E.3 - Backend local sobre la base migrada
+E.3 - Backend local sobre la base creada por create_all
 ================================================================================
 Directorio: backend   DATABASE_URL=postgresql+asyncpg://postgres:***@127.0.0.1:5433/libreria_global
-COMANDO:  alembic upgrade head
-SALIDA REAL:
-INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-INFO  [alembic.runtime.migration] Will assume transactional DDL.
+Nota: el 16/11/2026 se retiro Alembic por indicacion del profesor; el esquema
+lo crea la API con SQLModel.metadata.create_all. La verificacion completa de
+create_all sobre una base limpia esta en evidencia/esquema-create-all.txt.
 
 COMANDO:  python -m app.seed
 SALIDA REAL:
