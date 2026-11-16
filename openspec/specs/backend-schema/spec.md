@@ -1,7 +1,7 @@
 # backend-schema Specification
 
 ## Purpose
-TBD - created by archiving change volver-a-create-all. Update Purpose after archive.
+Creación del esquema de PostgreSQL al arrancar la API con `SQLModel.metadata.create_all`: tablas del dominio disponibles sin herramientas de migración, carga inicial autocontenida, imagen que levanta Uvicorn directamente y documentación que declara la limitación de `create_all` sobre tablas existentes.
 
 ## Requirements
 
