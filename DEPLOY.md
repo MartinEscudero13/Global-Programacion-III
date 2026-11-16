@@ -62,10 +62,11 @@ Se cargan en el panel, nunca en el repositorio.
 `backend/env.example` documenta los nombres y una URL de muestra. La clave real
 vive en `/root/libreria-global.env` de la VPS (permisos `600`, dueño `root`).
 
-## Esquema
+## Esquema y migraciones
 
-La API crea el esquema al arrancar con `SQLModel.metadata.create_all`, dentro del
-`lifespan`, y el `CMD` del contenedor sólo levanta Uvicorn:
+**No hay migraciones**: la API crea el esquema al arrancar con
+`SQLModel.metadata.create_all`, dentro del `lifespan`, y el `CMD` del contenedor
+sólo levanta Uvicorn:
 
 ```
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
